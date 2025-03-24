@@ -1,0 +1,37 @@
+port: 8080
+host: 127.0.0.1
+timeout: 10 # 服务超时时间，单位秒
+password_secret: "sztu"
+mode: "debug" # 运行模式：debug, test, release
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: 123456
+  db: MutliTable
+  logger:
+    loglevel: 2        # 日志级别：1 - 不输出日志，2 - 只输出错误日志，3 - 输出警告和错误日志，4 - 输出所有日志
+    slowThreshold: 500 # 慢查询阈值，单位毫秒
+    ignoreRecordNotFoundError: true # 忽略记录未找到错误
+    colorful: true     # 是否彩色输出
+    parameterizedQueries: false # 是否参数化查询
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  db: 0
+
+logger:
+  level: 0     # 日志级别：-1 - Debug, 0 - Info, 1 - Warn, 2 - Error, 3 - DPanic, 4 - Panic, 5 - Fatal
+  format: "json"      # 输出格式：console 或 json
+  outputPaths:        # 日志输出路径，可以是多个
+    - "stdout"        # 输出到标准输出
+    - "./logs/app.log" # 输出到文件
+  errorOutputPaths:
+    - "stderr"        # 错误日志输出路径
+    - "./logs/error.log" # 错误日志输出到文件
+  maxSize: 100        # 单个日志文件的最大大小 (MB)
+  maxBackups: 7       # 保留的旧日志文件个数
+  maxAge: 30          # 日志文件保留天数
+  compress: true      # 是否压缩旧的日志文件
