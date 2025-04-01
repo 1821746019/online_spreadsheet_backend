@@ -1,14 +1,17 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type CorsConfig struct {
-	AllowOrigins []string
-	AllowMethods []string
-	AllowHeaders []string
+	AllowOrigins    []string
+	AllowMethods    []string
+	AllowHeaders    []string
+	ExposeHeaders   []string
+	AllowWebSockets bool
 }
 
 type Option func(*CorsConfig)
@@ -47,6 +50,18 @@ func WithAllowHeaders(headers []string) Option {
 	}
 }
 
+func WithAllowWebSockets(allow bool) Option {
+	return func(cfg *CorsConfig) {
+		cfg.AllowWebSockets = allow
+	}
+}
+
+func WithExposeHeaders(headers []string) Option {
+	return func(cfg *CorsConfig) {
+		cfg.ExposeHeaders = headers
+	}
+}
+
 // CorsMiddleware 用于允许跨域请求
 func CorsMiddleware(options ...Option) gin.HandlerFunc {
 	cfg := newCorsConfig(options...)
@@ -59,6 +74,14 @@ func CorsMiddleware(options ...Option) gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", origins)
 		c.Writer.Header().Set("Access-Control-Allow-Methods", methods)
 		c.Writer.Header().Set("Access-Control-Allow-Headers", headers)
+
+		if cfg.AllowWebSockets {
+			c.Writer.Header().Set("Connection", "upgrade")
+			c.Writer.Header().Set("Upgrade", "websocket")
+			if len(cfg.ExposeHeaders) > 0 {
+				c.Writer.Header().Set("Access-Control-Expose-Headers", strings.Join(cfg.ExposeHeaders, ", "))
+			}
+		}
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(200)

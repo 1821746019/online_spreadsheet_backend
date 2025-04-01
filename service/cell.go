@@ -49,7 +49,7 @@ func UpdateCell(ctx context.Context, userID, sheetID int64, req DTO.UpdateCellRe
 	if perm == nil || perm.AccessLevel == "READ" {
 		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
 	}
-	if err := dao.UpdateCell(ctx, sheetID, req.Content, req.RowIndex, req.ColIndex); err != nil {
+	if err := dao.UpdateCell(ctx, sheetID, req.Content, req.RowIndex, req.ColIndex, userID); err != nil {
 		zap.L().Error("UpdateSheet 更新失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
 	}

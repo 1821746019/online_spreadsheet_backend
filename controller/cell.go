@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +31,7 @@ func GetCellsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, cells)
+	ResponseSuccess(c, cells)
 }
 
 // 更新单元格
@@ -58,7 +57,7 @@ func UpdateCellHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	if err := service.UpdateCell(ctx, currentUserID, sheetID, req); err != nil {
 		ResponseErrorWithApiError(c, err)
-		zap.L().Error("CreateSheet 失败", zap.Error(err))
+		zap.L().Error("UpdateCell 失败", zap.Error(err))
 		return
 	}
 

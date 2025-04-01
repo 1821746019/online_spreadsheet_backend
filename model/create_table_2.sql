@@ -3,7 +3,6 @@ CREATE DATABASE `MutliTable`;
 USE `MutliTable`;
 
 DROP TABLE IF EXISTS `user`;
-
 CREATE TABLE `user`
 (
     `id`          bigint(20)                             NOT NULL AUTO_INCREMENT COMMENT '自增主键，唯一标识用户记录',
@@ -14,15 +13,11 @@ CREATE TABLE `user`
     `create_time` timestamp                              NULL     DEFAULT CURRENT_TIMESTAMP COMMENT '记录的创建时间',
     `update_time` timestamp                              NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录的最后更新时间',
     `delete_time` bigint                           NULL DEFAULT 0 COMMENT '逻辑删除时间，NULL表示未删除',
-
     PRIMARY KEY (`id`) COMMENT '主键索引',
-
     -- 联合唯一索引：确保未删除的用户名唯一
     UNIQUE INDEX `idx_username_delete_time` (`username`, `delete_time`) USING BTREE COMMENT '联合索引：用户名和删除时间确保未删除的用户名唯一',
-
     -- 联合唯一索引：确保未删除的用户ID唯一
     UNIQUE INDEX `idx_user_id_delete_time` (`user_id`, `delete_time`) USING BTREE COMMENT '联合索引：用户ID和删除时间确保未删除的用户ID唯一',
-
      -- 联合唯一索引：确保未删除的邮箱唯一
     UNIQUE INDEX `idx_email_delete_time` (`email`, `delete_time`) USING BTREE COMMENT '联合索引：用户ID和删除时间确保未删除的用户ID唯一'
 ) ENGINE = InnoDB
@@ -30,16 +25,30 @@ CREATE TABLE `user`
   COLLATE = utf8mb4_general_ci
     COMMENT = '用户信息表：存储用户基本信息及状态';
 
-
+-- 班级表
+DROP TABLE IF EXISTS `class`;
+CREATE TABLE `class` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+  `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '班级名称',
+  `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `delete_time` bigint NULL DEFAULT 0 COMMENT '逻辑删除时间戳',
+  PRIMARY KEY (`id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci
+    COMMENT = '班级表:存储班级信息';
 
 -- 工作表
 DROP TABLE IF EXISTS `sheet`;
 CREATE TABLE `sheet` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '自增主键',
   `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '工作表名称',
+  `week` int NOT NULL COMMENT '周数',
   `row` int NOT NULL COMMENT '行数',
   `col` int NOT NULL COMMENT '列数',
   `creator_id` bigint(20) NOT NULL COMMENT '创建者ID（关联user.id）',
+  `class_id` bigint(20) NOT NULL COMMENT '班级ID（关联class.id）',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `delete_time` bigint NULL DEFAULT 0 COMMENT '逻辑删除时间戳',
@@ -54,8 +63,10 @@ CREATE TABLE `cell` (
   `sheet_id` bigint(20) NOT NULL COMMENT '所属工作表ID',
   `row_index` int NOT NULL COMMENT '行号（从1开始）',
   `col_index` int NOT NULL COMMENT '列号（从1开始）',
-  `content` text COLLATE utf8mb4_general_ci,
+  -- `content` text COLLATE utf8mb4_general_ci,
   `item_id` bigint(20) DEFAULT NULL COMMENT '关联的可拖放元素ID',
+  `last_modified_by` bigint(20) DEFAULT NULL COMMENT '最后修改者ID',
+  `version` int NOT NULL DEFAULT 1 COMMENT '版本号',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `delete_time` bigint NULL DEFAULT 0,
@@ -64,12 +75,13 @@ CREATE TABLE `cell` (
   INDEX `fk_item` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='单元格数据表';
 
--- 可拖放元素表
+-- 可拖放元素表(课程)
 DROP TABLE IF EXISTS `draggable_item`;
 CREATE TABLE `draggable_item` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `sheet_id` bigint(20) NOT NULL COMMENT '工作表ID',
-  `content` text COLLATE utf8mb4_general_ci NOT NULL COMMENT '元素内容',
+  `content` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '课程名称',
+  `week_type` ENUM('single', 'double', 'all') NOT NULL COMMENT '周类型：单周/双周/全上',
+  `classroom` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '上课教室',
   `creator_id` bigint(20) NOT NULL COMMENT '创建者ID',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -78,13 +90,22 @@ CREATE TABLE `draggable_item` (
   INDEX `idx_creator` (`creator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='可拖放元素库';
 
+--多班级复用
+DROP TABLE IF EXISTS `draggable_item_sheet`;
+CREATE TABLE `draggable_item_sheet` (
+  `item_id` bigint(20) NOT NULL COMMENT '可拖动元素ID',
+  `sheet_id` bigint(20) NOT NULL COMMENT '班级课表ID',
+  PRIMARY KEY (`item_id`, `sheet_id`),
+  FOREIGN KEY (`item_id`) REFERENCES `draggable_item`(`id`),
+  INDEX `idx_sheet` (`sheet_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='元素-课表关联表';
 -- 权限管理表
 DROP TABLE IF EXISTS `permission`;
 CREATE TABLE `permission` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `user_id` bigint(20) NOT NULL COMMENT '用户ID',
   `sheet_id` bigint(20) NOT NULL COMMENT '工作表ID',
-  `access_level` enum('READ','WRITE','ADMIN') NOT NULL DEFAULT 'READ',
+  -- `access_level` enum('READ','WRITE','ADMIN') NOT NULL DEFAULT 'READ',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `delete_time` bigint NULL DEFAULT 0,
