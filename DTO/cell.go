@@ -16,20 +16,28 @@ type UpdateCellRequestDTO struct {
 }
 
 type CreateDragItemRequestDTO struct {
-	Content string `json:"content" binding:"required"`
+	Content          string  `json:"content" binding:"required"`
+	WeekType         string  `json:"week_type" binding:"required"`
+	Classroom        string  `json:"classroom" binding:"required"`
+	SelectedClassIDs []int64 `json:"selected_class_ids,required"` // 使用omitempty实现可选
 }
 
 type UpdateDragItemRequestDTO struct {
-	Content string `json:"content" binding:"required"`
+	Content          string  `json:"content"`
+	WeekType         string  `json:"week_type"`
+	Classroom        string  `json:"classroom"`
+	SelectedClassIDs []int64 `json:"selected_class_ids"`
 }
 
 type DragItemResponseDTO struct {
-	ID         int64  `json:"id"`
-	SheetID    int64  `json:"sheet_id"`
-	Content    string `json:"content"`
-	CreatorID  int64  `json:"creator_id"`
-	CreateTime string `json:"create_time"`
-	UpdateTime string `json:"update_time"`
+	ID         int64    `json:"id"`
+	WeekType   string   `json:"week_type"`
+	Classroom  string   `json:"classroom"`
+	ClassNames []string `json:"class_names"`
+	Content    string   `json:"content"`
+	CreatorID  int64    `json:"creator_id"`
+	CreateTime string   `json:"create_time"`
+	UpdateTime string   `json:"update_time"`
 }
 
 type MoveDragItemRequest struct {

@@ -10,19 +10,17 @@ import (
 )
 
 // CreateSheetTx 使用事务插入一条 Sheet 记录
-func CreateSheetTx(tx *gorm.DB, sheet *model.Sheet) error {
-	return tx.Create(sheet).Error
+func CreateSheetTx(ctx context.Context, tx *gorm.DB, sheet *model.Sheet) error {
+	return tx.WithContext(ctx).Model(model.Sheet{}).Create(sheet).Error
 }
 
-// ListSheets 根据当前用户ID查询所有未删除且拥有权限的工作表，返回分页数据及总记录数
-func ListSheets(ctx context.Context, userID int64, page, pageSize int) ([]*model.Sheet, int64, error) {
+// ListSheets
+func ListSheets(ctx context.Context, userID, classID int64, page, pageSize int) ([]*model.Sheet, int64, error) {
 	var sheets []*model.Sheet
 	var total int64
 
-	// 通过 inner join permission 表过滤当前用户有权限的工作表
 	db := mysql.GetDB().WithContext(ctx).Model(&model.Sheet{}).
-		Joins("JOIN permission ON permission.sheet_id = sheet.id").
-		Where("permission.user_id = ? AND permission.delete_time = ? AND sheet.delete_time = ?", userID, 0, 0)
+		Where("class_id = ? AND delete_time = ?", classID, 0) // 移除权限关联，直接使用班级ID
 
 	// 查询总记录数
 	if err := db.Count(&total).Error; err != nil {
@@ -57,4 +55,13 @@ func DeleteSheet(ctx context.Context, sheetID int64) error {
 		Model(&model.Sheet{}).
 		Where("id = ? AND delete_time = ?", sheetID, 0).
 		Update("delete_time", time.Now().Unix()).Error
+}
+
+func GetSheetByClassIDandWeek(ctx context.Context, classID int64, week int) (*model.Sheet, error) {
+	var sheet model.Sheet
+	err := mysql.GetDB().WithContext(ctx).Where("class_id =? AND week =? AND delete_time =?", classID, week, 0).First(&sheet).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	return &sheet, err
 }

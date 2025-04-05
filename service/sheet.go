@@ -14,7 +14,7 @@ import (
 )
 
 // CreateSheet 创建新的工作表，同时为创建者添加 ADMIN 权限
-func CreateSheet(ctx context.Context, userID int64, dto *DTO.CreateSheetRequestDTO) (*DTO.SheetResponseDTO, *apiError.ApiError) {
+func CreateSheet(ctx context.Context, userID, classID int64, dto *DTO.CreateSheetRequestDTO) (*DTO.SheetResponseDTO, *apiError.ApiError) {
 	// 获取数据库句柄，并开启事务
 	db := mysql.GetDB().WithContext(ctx)
 	tx := db.Begin()
@@ -29,14 +29,16 @@ func CreateSheet(ctx context.Context, userID int64, dto *DTO.CreateSheetRequestD
 	sheet := &model.Sheet{
 		Name:       dto.Name,
 		CreatorID:  userID,
-		Row:        dto.Row,
-		Col:        dto.Col,
+		Week:       int32(dto.Week),
+		Row:        int32(dto.Row),
+		Col:        int32(dto.Col),
+		ClassID:    classID,
 		CreateTime: time.Now(),
 		UpdateTime: time.Now(),
 	}
 
 	// 插入 Sheet 记录
-	if err := dao.CreateSheetTx(tx, sheet); err != nil {
+	if err := dao.CreateSheetTx(context.Background(), tx, sheet); err != nil {
 		tx.Rollback()
 		zap.L().Error("CreateSheet 失败：插入 sheet 记录错误", zap.Error(err))
 		return nil, &apiError.ApiError{
@@ -50,9 +52,8 @@ func CreateSheet(ctx context.Context, userID int64, dto *DTO.CreateSheetRequestD
 		for col := 1; col <= dto.Col; col++ {
 			cells = append(cells, model.Cell{
 				SheetID:    sheet.ID,
-				RowIndex:   row,
-				ColIndex:   col,
-				Content:    "", // 默认内容为空
+				RowIndex:   int32(row),
+				ColIndex:   int32(col),
 				ItemID:     nil,
 				CreateTime: time.Now(),
 				UpdateTime: time.Now(),
@@ -71,23 +72,22 @@ func CreateSheet(ctx context.Context, userID int64, dto *DTO.CreateSheetRequestD
 	}
 
 	// 构造 Permission 记录
-	perm := &model.Permission{
-		UserID:      sheet.CreatorID,
-		SheetID:     sheet.ID,
-		AccessLevel: "ADMIN",
-		CreateTime:  time.Now(),
-		UpdateTime:  time.Now(),
-	}
+	// perm := &model.Permission{
+	// 	UserID:     sheet.CreatorID,
+	// 	SheetID:    sheet.ID,
+	// 	CreateTime: time.Now(),
+	// 	UpdateTime: time.Now(),
+	// }
 
-	// 插入 Permission 记录
-	if err := dao.CreatePermissionTx(tx, perm); err != nil {
-		tx.Rollback()
-		zap.L().Error("CreateSheet 失败：插入 permission 记录错误", zap.Error(err))
-		return nil, &apiError.ApiError{
-			Code: code.ServerError,
-			Msg:  "创建权限记录失败",
-		}
-	}
+	// // 插入 Permission 记录
+	// if err := dao.CreatePermissionTx(tx, perm); err != nil {
+	// 	tx.Rollback()
+	// 	zap.L().Error("CreateSheet 失败：插入 permission 记录错误", zap.Error(err))
+	// 	return nil, &apiError.ApiError{
+	// 		Code: code.ServerError,
+	// 		Msg:  "创建权限记录失败",
+	// 	}
+	// }
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
@@ -104,16 +104,18 @@ func CreateSheet(ctx context.Context, userID int64, dto *DTO.CreateSheetRequestD
 		ID:         sheet.ID,
 		Name:       sheet.Name,
 		CreatorID:  sheet.CreatorID,
+		Week:       int(sheet.Week),
 		Row:        dto.Row,
 		Col:        dto.Col,
+		ClassID:    classID,
 		CreateTime: time.Now().String(),
 		UpdateTime: time.Now().String(),
 	}, nil
 }
 
 // ListSheets 获取所有的工作表列表
-func ListSheets(ctx context.Context, userID int64, page, pageSize int) (*DTO.SheetListResponseDTO, *apiError.ApiError) {
-	sheets, total, err := dao.ListSheets(ctx, userID, page, pageSize)
+func ListSheets(ctx context.Context, userID, classID int64, page, pageSize int) (*DTO.SheetListResponseDTO, *apiError.ApiError) {
+	sheets, total, err := dao.ListSheets(ctx, userID, classID, page, pageSize)
 	if err != nil {
 		zap.L().Error("ListSheets 查询失败", zap.Error(err))
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取工作表列表失败"}
@@ -122,9 +124,9 @@ func ListSheets(ctx context.Context, userID int64, page, pageSize int) (*DTO.She
 	var sheetDTOs []DTO.SheetDTO
 	for _, s := range sheets {
 		sheetDTOs = append(sheetDTOs, DTO.SheetDTO{
-			ID:        s.ID,
-			Name:      s.Name,
-			CreatorID: s.CreatorID,
+			ID:      s.ID,
+			Name:    s.Name,
+			ClassID: s.ClassID,
 		})
 	}
 
@@ -158,11 +160,11 @@ func GetSheet(ctx context.Context, userID int64, sheetID int64) (*DTO.SheetDetai
 
 	// 构造返回的 DTO
 	return &DTO.SheetDetailResponseDTO{
-		ID:        sheet.ID,
-		Name:      sheet.Name,
-		CreatorID: sheet.CreatorID,
-		Row:       sheet.Row,
-		Col:       sheet.Col,
+		ID:   sheet.ID,
+		Name: sheet.Name,
+		Week: int(sheet.Week),
+		Row:  int(sheet.Row),
+		Col:  int(sheet.Col),
 	}, nil
 }
 
@@ -176,25 +178,10 @@ func UpdateSheet(ctx context.Context, userID, sheetID int64, dto *DTO.UpdateShee
 	if sheet == nil {
 		return &apiError.ApiError{Code: code.NotFound, Msg: "工作表不存在"}
 	}
-	// 查询权限记录
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetSheet 查询权限失败", zap.Error(err))
-		return &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil || perm.AccessLevel != "ADMIN" {
-		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
-	}
 
 	// 根据传入非 nil 的字段更新工作表
 	if dto.Name != nil {
 		sheet.Name = *dto.Name
-	}
-	if dto.Row != nil {
-		sheet.Row = *dto.Row
-	}
-	if dto.Col != nil {
-		sheet.Col = *dto.Col
 	}
 	sheet.UpdateTime = time.Now()
 

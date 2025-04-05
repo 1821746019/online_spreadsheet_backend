@@ -37,7 +37,6 @@ func SetupRouter() *gin.Engine {
 			controller.WithAllowOrigins([]string{"localhost"}),
 			controller.WithAllowMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 			controller.WithAllowHeaders([]string{"Origin", "Content-Type", "Accept", "Authorization"}),
-			controller.WithAllowWebSockets(true),
 		),
 	)
 
@@ -68,27 +67,34 @@ func SetupRouter() *gin.Engine {
 		// v1.GET("/document/:id/sheet/:sheet_id", controller.GetSheetHandler)
 		// v1.PUT("/document/:id/sheet/:sheet_id", controller.UpdateSheetHandler)
 		// v1.DELETE("/document/:id/sheet/:sheet_id", controller.DeleteSheetHandler)
-		// 工作表管理
-		v1.POST("/sheet", controller.CreateSheetHandler)
-		v1.GET("/sheet", controller.ListSheetsHandler)
-		v1.GET("/sheet/:sheet_id", controller.GetSheetHandler)
-		v1.PUT("/sheet/:sheet_id", controller.UpdateSheetHandler)
-		v1.DELETE("/sheet/:sheet_id", controller.DeleteSheetHandler)
 
-		// // 单元格管理
-		// v1.GET("/sheet/:sheet_id/cell", controller.GetCellsHandler)
+		// 班级管理
+		v1.POST("/classes", controller.CreateClassHandler)
+		v1.GET("/classes", controller.ListClassesHandler)
+		v1.GET("/classes/:class_id", controller.GetClassHandler)
+		v1.PUT("/classes/:class_id", controller.UpdateClassHandler)
+		v1.DELETE("/classes/:class_id", controller.DeleteClassHandler)
+
+		// 工作表管理
+		v1.POST("/classes/:class_id/sheet", controller.CreateSheetHandler)
+		v1.GET("/classes/:class_id/sheet", controller.ListSheetsHandler)
+		v1.GET("/classes/:class_id/sheet/:sheet_id", controller.GetSheetHandler)
+		v1.PUT("/classes/:class_id/sheet/:sheet_id", controller.UpdateSheetHandler)
+		v1.DELETE("/classes/:class_id/sheet/:sheet_id", controller.DeleteSheetHandler)
+
+		// 单元格管理
+		v1.GET("/classes/:class_id/sheet/:sheet_id/cell", controller.GetCellsHandler)
 		// v1.PUT("/sheet/:sheet_id/cell", controller.UpdateCellHandler)
 
-		// 新增待拖动单元格管理
-		v1.POST("/sheet/:sheet_id/drag-item", controller.CreateDragCellHandler)                 // 创建待拖动单元格(课程)
-		v1.GET("/sheet/:sheet_id/drag-item", controller.ListDragCellsHandler)                   // 列出所有待拖动单元格
-		v1.GET("/sheet/:sheet_id/drag-item/:drag_item_id", controller.GetDragCellHandler)       // 获取单个待拖动单元格
-		v1.PUT("/sheet/:sheet_id/drag-item/:drag_item_id", controller.UpdateDragCellHandler)    // 更新待拖动单元格
-		v1.DELETE("/sheet/:sheet_id/drag-item/:drag_item_id", controller.DeleteDragCellHandler) // 删除待拖动单元格
+		// 待拖动单元格管理
+		v1.POST("/drag-item", controller.CreateDragCellHandler)                 // 创建待拖动单元格(课程)
+		v1.GET("/:class_id/drag-item", controller.ListDragCellsHandler)         // 列出所有待拖动单元格
+		v1.GET("/drag-item/:drag_item_id", controller.GetDragCellHandler)       // 获取单个待拖动单元格
+		v1.PUT("/drag-item/:drag_item_id", controller.UpdateDragCellHandler)    // 更新待拖动单元格
+		v1.DELETE("/drag-item/:drag_item_id", controller.DeleteDragCellHandler) // 删除待拖动单元格
 
-		// 新增拖放操作接口
-		v1.PUT("/sheet/:sheet_id/drag-item/:drag_item_id/move", controller.MoveDragItemHandler)
-
+		// 拖放操作接口
+		v1.PUT("/classes/:class_id/sheet/:sheet_id/drag-item/:drag_item_id/move", controller.MoveDragItemHandler)
 	}
 
 	r.NoRoute(func(c *gin.Context) {

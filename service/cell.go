@@ -30,28 +30,27 @@ func GetCells(ctx context.Context, userID, sheetID int64) ([]DTO.CellDTO, *apiEr
 		result = append(result, DTO.CellDTO{
 			ID:       c.ID,
 			SheetID:  c.SheetID,
-			RowIndex: c.RowIndex,
-			ColIndex: c.ColIndex,
-			Content:  c.Content,
+			RowIndex: int(c.RowIndex),
+			ColIndex: int(c.ColIndex),
 			ItemID:   c.ItemID,
 		})
 	}
 	return result, nil
 }
 
-// 更新单元格
-func UpdateCell(ctx context.Context, userID, sheetID int64, req DTO.UpdateCellRequestDTO) *apiError.ApiError {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetSheet 查询权限失败", zap.Error(err))
-		return &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
-	}
-	if err := dao.UpdateCell(ctx, sheetID, req.Content, req.RowIndex, req.ColIndex, userID); err != nil {
-		zap.L().Error("UpdateSheet 更新失败", zap.Error(err))
-		return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-	}
-	return nil
-}
+// // 更新单元格
+// func UpdateCell(ctx context.Context, userID, sheetID int64, req DTO.UpdateCellRequestDTO) *apiError.ApiError {
+// 	perm, err := dao.GetPermission(ctx, userID, sheetID)
+// 	if err != nil {
+// 		zap.L().Error("GetSheet 查询权限失败", zap.Error(err))
+// 		return &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
+// 	}
+// 	if perm == nil {
+// 		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
+// 	}
+// 	if err := dao.UpdateCell(ctx, sheetID, req.Content, req.RowIndex, req.ColIndex, userID); err != nil {
+// 		zap.L().Error("UpdateSheet 更新失败", zap.Error(err))
+// 		return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
+// 	}
+// 	return nil
+// }

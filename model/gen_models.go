@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func main() {
+func GenerateModel() {
 	g := gen.NewGenerator(gen.Config{
 		OutPath: "./query",
 		Mode:    gen.WithoutContext | gen.WithDefaultQuery,

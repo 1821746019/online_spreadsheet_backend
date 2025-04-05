@@ -11,12 +11,6 @@ import (
 )
 
 func CreateDragCellHandler(c *gin.Context) {
-	sheetIDStr := c.Param("id")
-	sheetID, err := strconv.ParseInt(sheetIDStr, 10, 64)
-	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "invalid sheet_id")
-		return
-	}
 	var req DTO.CreateDragItemRequestDTO
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ResponseErrorWithMsg(c, code.InvalidParam, err.Error())
@@ -34,7 +28,7 @@ func CreateDragCellHandler(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	resp, apiErr := service.CreateDragItem(ctx, currentUserID, sheetID, &req)
+	resp, apiErr := service.CreateDragItem(ctx, currentUserID, &req)
 	if apiErr != nil {
 		ResponseErrorWithApiError(c, apiErr)
 		zap.L().Error("待拖动单元格创建失败", zap.Any("error", apiErr))
@@ -44,7 +38,7 @@ func CreateDragCellHandler(c *gin.Context) {
 }
 
 func ListDragCellsHandler(c *gin.Context) {
-	sheetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	classID, err := strconv.ParseInt(c.Param("class_id"), 10, 64)
 	if err != nil {
 		ResponseErrorWithMsg(c, code.InvalidParam, "无效的表格ID")
 		return
@@ -73,7 +67,7 @@ func ListDragCellsHandler(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	resp, apiErr := service.ListDragItems(ctx, currentUserID, sheetID)
+	resp, apiErr := service.ListDragItems(ctx, currentUserID, classID)
 	if apiErr != nil {
 		ResponseErrorWithApiError(c, apiErr)
 		zap.L().Error("查询失败", zap.Any("error", apiErr))
@@ -84,12 +78,6 @@ func ListDragCellsHandler(c *gin.Context) {
 }
 
 func GetDragCellHandler(c *gin.Context) {
-	sheetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "无效的表格ID")
-		return
-	}
-
 	itemID, err := strconv.ParseInt(c.Param("drag_item_id"), 10, 64)
 	if err != nil {
 		ResponseErrorWithMsg(c, code.InvalidParam, "无效的元素ID")
@@ -107,7 +95,7 @@ func GetDragCellHandler(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	resp, apiErr := service.GetDragItem(ctx, currentUserID, sheetID, itemID)
+	resp, apiErr := service.GetDragItem(ctx, currentUserID, itemID)
 	if apiErr != nil {
 		ResponseErrorWithApiError(c, apiErr)
 		zap.L().Error("获取失败", zap.Any("error", apiErr))
@@ -118,12 +106,6 @@ func GetDragCellHandler(c *gin.Context) {
 }
 
 func UpdateDragCellHandler(c *gin.Context) {
-	sheetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "无效的表格ID")
-		return
-	}
-
 	itemID, err := strconv.ParseInt(c.Param("drag_item_id"), 10, 64)
 	if err != nil {
 		ResponseErrorWithMsg(c, code.InvalidParam, "无效的元素ID")
@@ -149,7 +131,7 @@ func UpdateDragCellHandler(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 
-	resp, apiErr := service.UpdateDragItem(ctx, currentUserID, sheetID, itemID, &req)
+	resp, apiErr := service.UpdateDragItem(ctx, currentUserID, itemID, &req)
 	if apiErr != nil {
 		ResponseErrorWithApiError(c, apiErr)
 		zap.L().Error("更新失败", zap.Any("error", apiErr))
@@ -160,12 +142,6 @@ func UpdateDragCellHandler(c *gin.Context) {
 }
 
 func DeleteDragCellHandler(c *gin.Context) {
-	sheetID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "无效的表格ID")
-		return
-	}
-
 	itemID, err := strconv.ParseInt(c.Param("drag_item_id"), 10, 64)
 	if err != nil {
 		ResponseErrorWithMsg(c, code.InvalidParam, "无效的元素ID")
@@ -183,7 +159,7 @@ func DeleteDragCellHandler(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	if apiErr := service.DeleteDragItem(ctx, currentUserID, sheetID, itemID); apiErr != nil {
+	if apiErr := service.DeleteDragItem(ctx, currentUserID, itemID); apiErr != nil {
 		ResponseErrorWithApiError(c, apiErr)
 		zap.L().Error("删除失败", zap.Any("error", apiErr))
 		return

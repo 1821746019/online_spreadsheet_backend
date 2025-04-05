@@ -13,79 +13,78 @@ import (
 	"go.uber.org/zap"
 )
 
-func CreateDragItem(ctx context.Context, userID int64, sheetID int64, req *DTO.CreateDragItemRequestDTO) (*DTO.DragItemResponseDTO, *apiError.ApiError) {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("CreateDragItem 查询权限失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
+func CreateDragItem(ctx context.Context, userID int64, req *DTO.CreateDragItemRequestDTO) (*DTO.DragItemResponseDTO, *apiError.ApiError) {
+	// 复用逻辑验证
+	if len(req.SelectedClassIDs) == 0 {
+		return nil, &apiError.ApiError{Code: code.InvalidParam, Msg: "请选择要关联的班级"}
 	}
 
-	item := &model.DragItem{
-		Content:   req.Content,
-		CreatorID: userID,
-
+	item := &model.DraggableItem{
+		Content:    req.Content,
+		CreatorID:  userID,
+		WeekType:   req.WeekType,
+		Classroom:  req.Classroom,
 		CreateTime: time.Now(),
 		UpdateTime: time.Now(),
 	}
 
-	if err := dao.CreateDraggableItem(ctx, item); err != nil {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "创建失败"}
+	// 使用事务处理创建操作
+	tx := mysql.GetDB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := dao.CreateDraggableItemTx(ctx, tx, item); err != nil {
+		tx.Rollback()
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "创建失败"}
+	}
+
+	// 关联多个班级
+	for _, classID := range req.SelectedClassIDs {
+		if err := dao.CreateItemSheetRelationTx(ctx, tx, item.ID, classID); err != nil {
+			tx.Rollback()
+			zap.L().Error("创建班级关联失败",
+				zap.Int64("classID", classID),
+				zap.Error(err))
+			return nil, &apiError.ApiError{Code: code.ServerError, Msg: "关联班级失败"}
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "事务提交失败"}
 	}
 
 	return &DTO.DragItemResponseDTO{
 		ID:         item.ID,
+		WeekType:   item.WeekType,
+		Classroom:  item.Classroom,
 		Content:    item.Content,
-		SheetID:    sheetID,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),
 		UpdateTime: item.UpdateTime.Format(time.RFC3339),
 	}, nil
 }
 
-func ListDragItems(ctx context.Context, userID int64, sheetID int64) ([]*DTO.DragItemResponseDTO, *apiError.ApiError) {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("ListDragItems 查询权限失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
+func ListDragItems(ctx context.Context, userID int64, classID int64) ([]*DTO.DragItemResponseDTO, *apiError.ApiError) {
+	// 班级存在性校验
+	if _, err := dao.GetClassByID(ctx, classID); err != nil {
+		return nil, &apiError.ApiError{Code: code.NotFound, Msg: "班级不存在"}
 	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
-	}
-
-	// 获取该工作表所有的拖拽元素
-	items, err := dao.ListDraggableItemsBySheet(ctx, sheetID)
+	// 获取班级关联的所有元素
+	items, err := dao.ListDraggableItemsByClass(ctx, classID)
 	if err != nil {
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "查询拖拽元素失败"}
 	}
-
-	// 获取该工作表所有的单元格数据
-	cells, err := dao.GetCellsBySheetID(ctx, sheetID)
-	if err != nil {
-		zap.L().Error("ListDragItems 查询单元格失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "查询单元格失败"}
-	}
-	// 建立一个map，用来记录已经被单元格关联的拖拽元素ID
-	usedItems := make(map[int64]bool)
-	for _, cell := range cells {
-		// 如果cell的item_id不为0（或非nil，根据具体实现判断），则说明已经被关联
-		if cell.ItemID != nil {
-			usedItems[*cell.ItemID] = true
-		}
-	}
-
-	// 过滤掉已经关联的元素，只返回未被使用的拖拽元素
 	res := make([]*DTO.DragItemResponseDTO, 0, len(items))
 	for _, item := range items {
-		if usedItems[item.ID] {
-			continue
-		}
 		res = append(res, &DTO.DragItemResponseDTO{
 			ID:         item.ID,
-			SheetID:    sheetID,
 			Content:    item.Content,
+			WeekType:   item.WeekType,
+			Classroom:  item.Classroom,
 			CreatorID:  item.CreatorID,
 			CreateTime: item.CreateTime.Format(time.RFC3339),
 			UpdateTime: item.UpdateTime.Format(time.RFC3339),
@@ -94,85 +93,108 @@ func ListDragItems(ctx context.Context, userID int64, sheetID int64) ([]*DTO.Dra
 	return res, nil
 }
 
-func GetDragItem(ctx context.Context, userID int64, sheetID int64, itemID int64) (*DTO.DragItemResponseDTO, *apiError.ApiError) {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetDragItem 查询权限失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
-	}
+func GetDragItem(ctx context.Context, userID int64, itemID int64) (*DTO.DragItemResponseDTO, *apiError.ApiError) {
 	item, err := dao.GetDraggableItemByID(ctx, itemID)
 	if err != nil || item == nil {
 		return nil, &apiError.ApiError{Code: code.NotFound, Msg: "元素不存在"}
 	}
-
+	if item.CreatorID != userID {
+		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该元素"}
+	}
+	classNames, err := dao.GetClassNamesByItemID(ctx, itemID)
+	if err != nil {
+		zap.L().Error("获取班级名称失败",
+			zap.Int64("itemID", itemID),
+			zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取班级信息失败"}
+	}
 	return &DTO.DragItemResponseDTO{
 		ID:         item.ID,
-		SheetID:    item.SheetID,
 		Content:    item.Content,
+		WeekType:   item.WeekType,
+		Classroom:  item.Classroom,
+		ClassNames: classNames,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),
 		UpdateTime: item.UpdateTime.Format(time.RFC3339),
 	}, nil
 }
 
-func UpdateDragItem(ctx context.Context, userID int64, sheetID int64, itemID int64, req *DTO.UpdateDragItemRequestDTO) (*DTO.DragItemResponseDTO, *apiError.ApiError) {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetDragItem 查询权限失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
-	}
+func UpdateDragItem(ctx context.Context, userID int64, itemID int64, req *DTO.UpdateDragItemRequestDTO) (*DTO.DragItemResponseDTO, *apiError.ApiError) {
 	item, err := dao.GetDraggableItemByID(ctx, itemID)
 	if err != nil || item == nil {
 		return nil, &apiError.ApiError{code.NotFound, "元素不存在"}
 	}
+	if item.CreatorID != userID {
+		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该元素"}
+	}
+	// 开启事务
+	tx := mysql.GetDB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 更新基础信息
 	item.Content = req.Content
 	item.UpdateTime = time.Now()
-
-	if err := dao.UpdateDraggableItem(ctx, item); err != nil {
-		return nil, &apiError.ApiError{code.ServerError, "更新失败"}
+	item.WeekType = req.WeekType
+	item.Classroom = req.Classroom
+	if err := dao.UpdateDraggableItemTx(ctx, tx, item); err != nil {
+		tx.Rollback()
+		return nil, &apiError.ApiError{code.ServerError, "基础信息更新失败"}
 	}
+
+	// 删除旧的班级关联
+	if err := dao.DeleteItemClassRelationsTx(ctx, tx, itemID); err != nil {
+		tx.Rollback()
+		zap.L().Error("删除旧班级关联失败", zap.Int64("itemID", itemID), zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "班级关联更新失败"}
+	}
+
+	// 添加新的班级关联
+	for _, classID := range req.SelectedClassIDs {
+		if err := dao.CreateItemSheetRelationTx(ctx, tx, itemID, classID); err != nil {
+			tx.Rollback()
+			zap.L().Error("创建班级关联失败",
+				zap.Int64("classID", classID),
+				zap.Error(err))
+			return nil, &apiError.ApiError{Code: code.ServerError, Msg: "班级关联更新失败"}
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "事务提交失败"}
+	}
+
+	// 获取最新班级名称
+	classNames, _ := dao.GetClassNamesByItemID(ctx, itemID) // 忽略错误，主流程已成功
 
 	return &DTO.DragItemResponseDTO{
 		ID:         item.ID,
-		SheetID:    item.SheetID,
 		Content:    item.Content,
+		WeekType:   item.WeekType,
+		Classroom:  item.Classroom,
+		ClassNames: classNames,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),
 		UpdateTime: item.UpdateTime.Format(time.RFC3339),
 	}, nil
 }
 
-func DeleteDragItem(ctx context.Context, userID int64, sheetID int64, itemID int64) *apiError.ApiError {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetDragItem 查询权限失败", zap.Error(err))
-		return &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
-	}
+func DeleteDragItem(ctx context.Context, userID int64, itemID int64) *apiError.ApiError {
 	item, err := dao.GetDraggableItemByID(ctx, itemID)
-	if err != nil {
-		zap.L().Error("DeleteDragItem 查询元素失败",
-			zap.Int64("itemID", itemID),
-			zap.Error(err))
-		return &apiError.ApiError{code.ServerError, "查询元素失败"}
-	}
-	if item == nil {
+	if err != nil || item == nil {
 		return &apiError.ApiError{code.NotFound, "元素不存在"}
 	}
-	// 5. 检查元素是否被单元格引用
-	var refCount int64
-	if err := mysql.GetDB().WithContext(ctx).
-		Model(&model.Cell{}).
-		Where("item_id = ? AND delete_time = 0", itemID).
-		Count(&refCount).Error; err != nil {
+	if item.CreatorID != userID {
+		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该元素"}
+	}
+	// 检查元素是否被单元格引用
+	refCount, err := dao.CountCellReferences(ctx, itemID)
+	if err != nil {
 		zap.L().Error("DeleteDragItem 检查引用失败",
 			zap.Int64("itemID", itemID),
 			zap.Error(err))
@@ -181,12 +203,36 @@ func DeleteDragItem(ctx context.Context, userID int64, sheetID int64, itemID int
 	if refCount > 0 {
 		return &apiError.ApiError{code.ServerError, "存在关联单元格，请先解除关联"}
 	}
-	// 6. 执行删除操作
-	if err := dao.DeleteDraggableItem(ctx, itemID, sheetID); err != nil {
+	// 执行删除操作
+	// 开启事务
+	tx := mysql.GetDB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除班级关联关系
+	if err := dao.DeleteItemClassRelationsTx(ctx, tx, itemID); err != nil {
+		tx.Rollback()
+		zap.L().Error("删除班级关联失败",
+			zap.Int64("itemID", itemID),
+			zap.Error(err))
+		return &apiError.ApiError{Code: code.ServerError, Msg: "删除关联信息失败"}
+	}
+
+	// 执行删除操作
+	if err := dao.DeleteDraggableItemTx(ctx, tx, itemID); err != nil {
+		tx.Rollback()
 		zap.L().Error("DeleteDragItem 删除失败",
 			zap.Int64("itemID", itemID),
 			zap.Error(err))
 		return &apiError.ApiError{code.ServerError, "删除操作失败"}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return &apiError.ApiError{Code: code.ServerError, Msg: "事务提交失败"}
 	}
 	return nil
 }
@@ -198,16 +244,15 @@ func DeleteDragItem(ctx context.Context, userID int64, sheetID int64, itemID int
 //   - 当目标单元格为空时，直接移动拖拽元素（同时清空原单元格的关联）
 //
 // 2. 如果拖拽元素原本不在任何单元格中（sourceCell 为 nil，即在待拖拽列表中）
-//   - 当目标单元格已有拖拽元素时，返回错误（或根据业务设计可定义其他处理）
-//   - 当目标单元格为空时，从待拖拽列表中获取该拖拽元素，将目标单元格的 Content 设为拖拽元素的 Content，并关联该拖拽元素
+//   - 当目标单元格已有拖拽元素时，返回错误
+//   - 当目标单元格为空时，从待拖拽列表中获取该拖拽元素，并关联该拖拽元素
 func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *DTO.MoveDragItemRequest) *apiError.ApiError {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetDragItem 查询权限失败", zap.Error(err))
-		return &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
+	item, err := dao.GetDraggableItemByID(ctx, dragItemID)
+	if err != nil || item == nil {
+		return &apiError.ApiError{code.NotFound, "元素不存在"}
 	}
-	if perm == nil || perm.AccessLevel == "READ" {
-		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该工作表"}
+	if item.CreatorID != userID {
+		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该元素"}
 	}
 	db := mysql.GetDB().WithContext(ctx)
 	tx := db.Begin()
@@ -226,9 +271,9 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		return &apiError.ApiError{Code: code.ServerError, Msg: "获取源单元格失败"}
 	}
 
-	// 获取目标单元格（必须存在，否则请确保工作表创建时已生成所有单元格）
+	// 获取目标单元格
 	targetCell, err := dao.GetCellByPositionTx(ctx, tx, sheetID, dto.TargetRow, dto.TargetCol)
-	if err != nil {
+	if err != nil || targetCell == nil || targetCell.LastModifiedBy != userID {
 		tx.Rollback()
 		zap.L().Error("MoveDragItem 获取目标单元格失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "获取目标单元格失败"}
@@ -255,9 +300,12 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			}
 		} else {
 			// 若拖拽元素来自待拖拽列表，但目标单元格已有拖拽元素，则按业务规则不支持交换
-			tx.Rollback()
-			zap.L().Error("MoveDragItem 错误：待拖拽列表中的元素不能与已有元素交换", zap.Int64("dragItemID", dragItemID))
-			return &apiError.ApiError{Code: code.InvalidParam, Msg: "目标单元格已有拖拽元素，无法进行交换"}
+			targetCell.ItemID = &item.ID // 保持目标单元格的拖拽元素不变，或者根据业务逻辑调整
+			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
+				tx.Rollback()
+				zap.L().Error("MoveDragItem 更新源单元格失败", zap.Error(err))
+				return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
+			}
 		}
 	} else {
 		// 目标单元格没有拖拽元素
@@ -275,7 +323,6 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 				return &apiError.ApiError{Code: code.NotFound, Msg: "拖拽元素不存在"}
 			}
 			// 将目标单元格的内容设为拖拽元素的内容，并关联该拖拽元素
-			targetCell.Content = dragItem.Content
 			targetCell.ItemID = &dragItemID
 			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
 				tx.Rollback()
@@ -284,7 +331,6 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			}
 		} else {
 			// 拖拽元素原本在某单元格中，且目标单元格为空：直接移动
-			targetCell.Content = "" // 清空目标原有内容
 			targetCell.ItemID = &dragItemID
 			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
 				tx.Rollback()
@@ -313,6 +359,62 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		tx.Rollback()
 		zap.L().Error("MoveDragItem 事务提交失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "事务提交失败"}
+	}
+
+	currentSheet, err := dao.GetSheetByID(ctx, sheetID)
+	if err != nil || currentSheet == nil {
+		zap.L().Error("获取工作表信息失败", zap.Error(err))
+		return &apiError.ApiError{Code: code.ServerError, Msg: "获取工作表失败"}
+	}
+	// 根据周类型生成目标周列表
+	var targetWeeks []int
+	switch item.WeekType {
+	case "single":
+		for w := 1; w <= 18; w += 2 { // 假设总共有18周
+			targetWeeks = append(targetWeeks, w)
+		}
+	case "double":
+		for w := 2; w <= 18; w += 2 {
+			targetWeeks = append(targetWeeks, w)
+		}
+	case "all":
+		for w := 1; w <= 18; w++ {
+			targetWeeks = append(targetWeeks, w)
+		}
+	}
+
+	// 为每个目标周创建/更新单元格
+	for _, week := range targetWeeks {
+		if week == int(currentSheet.Week) { // 跳过当前周（已处理）
+			continue
+		}
+
+		// 获取目标周的工作表
+		targetSheet, err := dao.GetSheetByClassIDandWeek(ctx, currentSheet.ClassID, week)
+		if err != nil {
+			zap.L().Error("获取周工作表失败",
+				zap.Int("week", week),
+				zap.Error(err))
+			continue
+		}
+		// 获取目标单元格
+		targetCell, err := dao.GetCellByPosition(ctx, targetSheet.ID, dto.TargetRow, dto.TargetCol)
+		if err != nil || targetCell == nil {
+			zap.L().Error("获取目标单元格失败",
+				zap.Int("week", week),
+				zap.Error(err))
+			continue
+		}
+
+		targetCell.ItemID = &dragItemID
+		targetCell.UpdateTime = time.Now()
+
+		// 更新目标单元格
+		if err := dao.UpdateCell(ctx, sheetID, targetCell); err != nil {
+			zap.L().Error("更新周单元格失败",
+				zap.Int("week", week),
+				zap.Error(err))
+		}
 	}
 
 	return nil
