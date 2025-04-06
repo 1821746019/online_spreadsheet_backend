@@ -136,11 +136,6 @@ func GetCellByPositionTx(ctx context.Context, tx *gorm.DB, sheetID int64, rowInd
 	return &cell, nil
 }
 
-// UpdateCellTx 更新单元格记录
-func UpdateCellTx(ctx context.Context, tx *gorm.DB, cell *model.Cell) error {
-	return tx.WithContext(ctx).Save(cell).Error
-}
-
 // GetDraggableItemByIDTx 根据工作表 ID 和拖拽元素 ID 获取待拖拽元素记录
 func GetDraggableItemByIDTx(ctx context.Context, tx *gorm.DB, sheetID, DraggableItemID int64) (*model.DraggableItem, error) {
 	var item model.DraggableItem

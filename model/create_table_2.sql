@@ -96,7 +96,6 @@ CREATE TABLE `draggable_class_sheet` (
   `item_id` bigint(20) NOT NULL COMMENT '可拖动元素ID',
   `class_id` bigint(20) NOT NULL COMMENT '班级ID',
   PRIMARY KEY (`item_id`, `class_id`),
-  FOREIGN KEY (`item_id`) REFERENCES `draggable_item`(`id`),
   INDEX `idx_sheet` (`class_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='元素-课表关联表';
 -- 权限管理表
