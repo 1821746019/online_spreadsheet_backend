@@ -38,12 +38,12 @@ func ClassNameExists(ctx context.Context, name string) (bool, error) {
 	return exist, nil
 }
 
-func ListClasses(ctx context.Context, userID int64, page, pageSize int) ([]*model.Class, int64, error) {
+func ListClasses(ctx context.Context, page, pageSize int) ([]*model.Class, int64, error) {
 	var classes []*model.Class
 	var total int64
 
 	db := mysql.GetDB().WithContext(ctx).Model(&model.Class{}).
-		Where("user_id =? AND delete_time = 0", userID) // 移除权限关联，直接使用班级ID
+		Where("delete_time = 0 OR delete_time is NULL")
 
 	// 查询总记录数
 	if err := db.Count(&total).Error; err != nil {

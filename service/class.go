@@ -30,8 +30,8 @@ func CreateClass(ctx context.Context, userID int64, req *DTO.CreateClassRequestD
 	return &DTO.ClassResponseDTO{ID: class.ID, Name: class.Name}, nil
 }
 
-func ListClasses(ctx context.Context, userID int64, page, pageSize int) (*DTO.ClassListDTO, *apiError.ApiError) {
-	classes, total, err := dao.ListClasses(ctx, userID, page, pageSize)
+func ListClasses(ctx context.Context, page, pageSize int) (*DTO.ClassListDTO, *apiError.ApiError) {
+	classes, total, err := dao.ListClasses(ctx, page, pageSize)
 	if err != nil {
 		zap.L().Error("查询班级列表失败", zap.Error(err))
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "查询班级列表失败"}

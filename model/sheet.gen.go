@@ -6,8 +6,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 const TableNameSheet = "sheet"
@@ -23,7 +21,7 @@ type Sheet struct {
 	ClassID    int64     `gorm:"column:class_id;not null;comment:班级ID（关联class.id）" json:"class_id"`     // 班级ID（关联class.id）
 	CreateTime time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime time.Time `gorm:"column:update_time;default:CURRENT_TIMESTAMP" json:"update_time"`
-	DeletedTime    gorm.DeletedAt     `gorm:"column:deleted_time" json:"deleted_time"`
+	DeleteTime int64     `gorm:"column:delete_time;comment:逻辑删除时间戳" json:"delete_time"` // 逻辑删除时间戳
 }
 
 // TableName Sheet's table name

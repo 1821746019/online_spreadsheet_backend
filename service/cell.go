@@ -7,18 +7,9 @@ import (
 	"github.com/sztu/mutli-table/DTO"
 	"github.com/sztu/mutli-table/pkg/apiError"
 	"github.com/sztu/mutli-table/pkg/code"
-	"go.uber.org/zap"
 )
 
 func GetCells(ctx context.Context, userID, sheetID int64) ([]DTO.CellDTO, *apiError.ApiError) {
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetSheet 查询权限失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该工作表"}
-	}
 	// 查询单元格
 	cells, err := dao.GetCellsBySheetID(ctx, sheetID)
 	if err != nil {

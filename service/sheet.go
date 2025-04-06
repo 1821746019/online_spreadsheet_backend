@@ -139,15 +139,6 @@ func ListSheets(ctx context.Context, userID, classID int64, page, pageSize int) 
 
 // GetSheet 根据 sheetID 获取工作表详情
 func GetSheet(ctx context.Context, userID int64, sheetID int64) (*DTO.SheetDetailResponseDTO, *apiError.ApiError) {
-	// 查询权限记录
-	perm, err := dao.GetPermission(ctx, userID, sheetID)
-	if err != nil {
-		zap.L().Error("GetSheet 查询权限失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "检查权限失败"}
-	}
-	if perm == nil {
-		return nil, &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该工作表"}
-	}
 	// 查询工作表详情
 	sheet, err := dao.GetSheetByID(ctx, sheetID)
 	if err != nil {

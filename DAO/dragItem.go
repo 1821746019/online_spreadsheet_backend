@@ -40,12 +40,12 @@ func GetClassNamesByItemID(ctx context.Context, itemID int64) ([]string, error) 
 func DeleteItemClassRelationsTx(ctx context.Context, tx *gorm.DB, itemID int64) error {
 	return tx.WithContext(ctx).
 		Where("item_id = ?", itemID).
-		Delete(&model.DraggableItemClass{}).Error
+		Delete(&model.DraggableClassSheet{}).Error
 }
 
 // 创建元素-班级关联
 func CreateItemSheetRelationTx(ctx context.Context, tx *gorm.DB, itemID, classID int64) error {
-	relation := &model.DraggableItemClass{
+	relation := &model.DraggableClassSheet{
 		ItemID:  itemID,
 		ClassID: classID,
 	}

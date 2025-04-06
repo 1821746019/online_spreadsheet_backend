@@ -6,8 +6,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 const TableNameDraggableItem = "draggable_item"
@@ -21,7 +19,7 @@ type DraggableItem struct {
 	CreatorID  int64     `gorm:"column:creator_id;not null;comment:创建者ID" json:"creator_id"`      // 创建者ID
 	CreateTime time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime time.Time `gorm:"column:update_time;default:CURRENT_TIMESTAMP" json:"update_time"`
-	DeletedTime    gorm.DeletedAt     `gorm:"column:deleted_time" json:"deleted_time"`
+	DeleteTime int64     `gorm:"column:delete_time" json:"delete_time"`
 }
 
 // TableName DraggableItem's table name

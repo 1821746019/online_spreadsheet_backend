@@ -27,10 +27,9 @@ type UpdateSheetRequestDTO struct {
 
 // SheetDTO 工作表通用 DTO（用于列表和详情展示）
 type SheetDTO struct {
-	ID        int64  `json:"id"`         // 工作表 ID
-	Name      string `json:"name"`       // 工作表名称
-	CreatorID int64  `json:"creator_id"` // 创建者 ID
-	ClassID   int64  `json:"class_id"`   // 班级 ID
+	ID      int64  `json:"id"`       // 工作表 ID
+	Name    string `json:"name"`     // 工作表名称
+	ClassID int64  `json:"class_id"` // 班级 ID
 }
 
 // SheetListResponseDTO 工作表列表分页响应 DTO

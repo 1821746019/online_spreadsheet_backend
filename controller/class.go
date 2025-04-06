@@ -60,14 +60,14 @@ func ListClassesHandler(c *gin.Context) {
 		ResponseErrorWithMsg(c, code.InvalidAuth, "用户未登录")
 		return
 	}
-	currentUserID, ok := userIDValue.(int64)
+	_, ok := userIDValue.(int64)
 	if !ok {
 		ResponseErrorWithMsg(c, code.ServerError, "用户ID解析错误")
 		return
 	}
 
 	ctx := c.Request.Context()
-	result, apiErr := service.ListClasses(ctx, currentUserID, page, pageSize)
+	result, apiErr := service.ListClasses(ctx, page, pageSize)
 	if apiErr != nil {
 		ResponseErrorWithApiError(c, apiErr)
 		zap.L().Error("ListClasses 失败", zap.Error(apiErr))

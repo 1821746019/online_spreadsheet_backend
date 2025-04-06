@@ -6,8 +6,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 const TableNameCell = "cell"
@@ -23,7 +21,7 @@ type Cell struct {
 	Version        int32     `gorm:"column:version;not null;default:1;comment:版本号" json:"version"`    // 版本号
 	CreateTime     time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime     time.Time `gorm:"column:update_time;default:CURRENT_TIMESTAMP" json:"update_time"`
-	DeletedTime    gorm.DeletedAt     `gorm:"column:deleted_time" json:"deleted_time"`
+	DeleteTime     int64     `gorm:"column:delete_time" json:"delete_time"`
 }
 
 // TableName Cell's table name

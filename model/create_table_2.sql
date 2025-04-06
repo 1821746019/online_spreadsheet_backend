@@ -12,14 +12,14 @@ CREATE TABLE `user`
     `email`       varchar(64) COLLATE utf8mb4_general_ci COMMENT '用户邮箱，可为空',
     `create_time` timestamp                              NULL     DEFAULT CURRENT_TIMESTAMP COMMENT '记录的创建时间',
     `update_time` timestamp                              NULL     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '记录的最后更新时间',
-    `deleted_time` bigint                           NULL DEFAULT 0 COMMENT '逻辑删除时间，NULL表示未删除',
+    `delete_time` bigint                           NULL DEFAULT 0 COMMENT '逻辑删除时间，NULL表示未删除',
     PRIMARY KEY (`id`) COMMENT '主键索引',
     -- 联合唯一索引：确保未删除的用户名唯一
-    UNIQUE INDEX `idx_username_deleted_time` (`username`, `deleted_time`) USING BTREE COMMENT '联合索引：用户名和删除时间确保未删除的用户名唯一',
+    UNIQUE INDEX `idx_username_delete_time` (`username`, `delete_time`) USING BTREE COMMENT '联合索引：用户名和删除时间确保未删除的用户名唯一',
     -- 联合唯一索引：确保未删除的用户ID唯一
-    UNIQUE INDEX `idx_user_id_deleted_time` (`user_id`, `deleted_time`) USING BTREE COMMENT '联合索引：用户ID和删除时间确保未删除的用户ID唯一',
+    UNIQUE INDEX `idx_user_id_delete_time` (`user_id`, `delete_time`) USING BTREE COMMENT '联合索引：用户ID和删除时间确保未删除的用户ID唯一',
      -- 联合唯一索引：确保未删除的邮箱唯一
-    UNIQUE INDEX `idx_email_deleted_time` (`email`, `deleted_time`) USING BTREE COMMENT '联合索引：用户ID和删除时间确保未删除的用户ID唯一'
+    UNIQUE INDEX `idx_email_delete_time` (`email`, `delete_time`) USING BTREE COMMENT '联合索引：用户ID和删除时间确保未删除的用户ID唯一'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci
@@ -32,7 +32,7 @@ CREATE TABLE `class` (
   `name` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '班级名称',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_time` bigint NULL DEFAULT 0 COMMENT '逻辑删除时间戳',
+  `delete_time` bigint NULL DEFAULT 0 COMMENT '逻辑删除时间戳',
   PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -51,7 +51,7 @@ CREATE TABLE `sheet` (
   `class_id` bigint(20) NOT NULL COMMENT '班级ID（关联class.id）',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_time` bigint NULL DEFAULT 0 COMMENT '逻辑删除时间戳',
+  `delete_time` bigint NULL DEFAULT 0 COMMENT '逻辑删除时间戳',
   PRIMARY KEY (`id`),
   INDEX `idx_creator` (`creator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='工作表主表';
@@ -69,9 +69,9 @@ CREATE TABLE `cell` (
   `version` int NOT NULL DEFAULT 1 COMMENT '版本号',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_time` bigint NULL DEFAULT 0,
+  `delete_time` bigint NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `idx_cell_position` (`sheet_id`, `row_index`, `col_index`, `deleted_time`),
+  UNIQUE INDEX `idx_cell_position` (`sheet_id`, `row_index`, `col_index`, `delete_time`),
   INDEX `fk_item` (`item_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='单元格数据表';
 
@@ -85,12 +85,12 @@ CREATE TABLE `draggable_item` (
   `creator_id` bigint(20) NOT NULL COMMENT '创建者ID',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_time` bigint NULL DEFAULT 0,
+  `delete_time` bigint NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   INDEX `idx_creator` (`creator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='可拖放元素库';
 
---多班级复用
+-- 多班级复用
 DROP TABLE IF EXISTS `draggable_class_sheet`;
 CREATE TABLE `draggable_class_sheet` (
   `item_id` bigint(20) NOT NULL COMMENT '可拖动元素ID',
@@ -107,7 +107,7 @@ CREATE TABLE `permission` (
   -- `access_level` enum('READ','WRITE','ADMIN') NOT NULL DEFAULT 'READ',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted_time` bigint NULL DEFAULT 0,
+  `delete_time` bigint NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `idx_user_sheet` (`user_id`, `sheet_id`, `deleted_time`)
+  UNIQUE INDEX `idx_user_sheet` (`user_id`, `sheet_id`, `delete_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='权限控制表';

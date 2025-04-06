@@ -6,8 +6,6 @@ package model
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 const TableNameUser = "user"
@@ -21,7 +19,7 @@ type User struct {
 	Email      string    `gorm:"column:email;comment:用户邮箱，可为空" json:"email"`                                        // 用户邮箱，可为空
 	CreateTime time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP;comment:记录的创建时间" json:"create_time"`   // 记录的创建时间
 	UpdateTime time.Time `gorm:"column:update_time;default:CURRENT_TIMESTAMP;comment:记录的最后更新时间" json:"update_time"` // 记录的最后更新时间
-	DeletedTime    gorm.DeletedAt     `gorm:"column:deleted_time" json:"deleted_time"`
+	DeleteTime int64     `gorm:"column:delete_time;comment:逻辑删除时间，NULL表示未删除" json:"delete_time"`                    // 逻辑删除时间，NULL表示未删除
 }
 
 // TableName User's table name

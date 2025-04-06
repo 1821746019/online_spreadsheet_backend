@@ -2,13 +2,13 @@ port: 8080
 host: 127.0.0.1
 timeout: 10 # 服务超时时间，单位秒
 password_secret: "sztu"
-mode: "debug" # 运行模式：debug, test, release
+mode: "test" # 运行模式：debug, test, release
 
 mysql:
   host: 127.0.0.1
   port: 3306
   user: root
-  password: 123456
+  password: 5210165
   db: MutliTable
   logger:
     loglevel: 2        # 日志级别：1 - 不输出日志，2 - 只输出错误日志，3 - 输出警告和错误日志，4 - 输出所有日志

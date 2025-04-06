@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func GenerateModel() {
+func Genretate() {
 	g := gen.NewGenerator(gen.Config{
 		OutPath: "./query",
 		Mode:    gen.WithoutContext | gen.WithDefaultQuery,
@@ -23,7 +23,7 @@ func GenerateModel() {
 		g.GenerateModel("sheet"),
 		g.GenerateModel("cell"),
 		g.GenerateModel("draggable_item"),
-		g.GenerateModel("draggable_item_sheet"),
+		g.GenerateModel("draggable_class_sheet"),
 		g.GenerateModel("permission"),
 	)
 
