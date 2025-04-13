@@ -278,6 +278,11 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		zap.L().Error("MoveDragItem 获取目标单元格失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "获取目标单元格失败"}
 	}
+	if targetCell.ItemID != nil && targetCell.LastModifiedBy != userID {
+		// 目标单元格已有拖拽元素，不允许移动
+		tx.Rollback()
+		return &apiError.ApiError{Code: code.ServerError, Msg: "目标单元格已有拖拽元素"}
+	}
 
 	// 如果目标单元格已有拖拽元素（targetCell.ItemID != nil）
 	if targetCell.ItemID != nil {
@@ -311,7 +316,7 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		// 目标单元格没有拖拽元素
 		if sourceCell == nil {
 			// 拖拽元素来自待拖拽列表，从待拖拽库中获取该拖拽元素记录
-			dragItem, err := dao.GetDraggableItemByIDTx(ctx, tx, sheetID, dragItemID)
+			dragItem, err := dao.GetDraggableItemByIDTx(ctx, tx, dragItemID)
 			if err != nil {
 				tx.Rollback()
 				zap.L().Error("MoveDragItem 获取待拖拽元素失败", zap.Error(err))

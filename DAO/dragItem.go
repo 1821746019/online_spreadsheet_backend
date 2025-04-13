@@ -137,10 +137,10 @@ func GetCellByPositionTx(ctx context.Context, tx *gorm.DB, sheetID int64, rowInd
 }
 
 // GetDraggableItemByIDTx 根据工作表 ID 和拖拽元素 ID 获取待拖拽元素记录
-func GetDraggableItemByIDTx(ctx context.Context, tx *gorm.DB, sheetID, DraggableItemID int64) (*model.DraggableItem, error) {
+func GetDraggableItemByIDTx(ctx context.Context, tx *gorm.DB, DraggableItemID int64) (*model.DraggableItem, error) {
 	var item model.DraggableItem
 	err := tx.WithContext(ctx).
-		Where("sheet_id = ? AND id = ? AND delete_time = 0", sheetID, DraggableItemID).
+		Where("id = ? AND delete_time = 0", DraggableItemID).
 		First(&item).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
