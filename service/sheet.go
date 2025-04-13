@@ -15,6 +15,11 @@ import (
 
 // CreateSheet 创建新的工作表，同时为创建者添加 ADMIN 权限
 func CreateSheet(ctx context.Context, userID, classID int64, dto *DTO.CreateSheetRequestDTO) (*DTO.SheetResponseDTO, *apiError.ApiError) {
+	_, err := dao.GetClassByID(ctx, classID)
+	if err != nil {
+		zap.L().Error("CreateSheet 查询班级失败", zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "创建工作表失败"}
+	}
 	// 获取数据库句柄，并开启事务
 	db := mysql.GetDB().WithContext(ctx)
 	tx := db.Begin()
@@ -115,6 +120,11 @@ func CreateSheet(ctx context.Context, userID, classID int64, dto *DTO.CreateShee
 
 // ListSheets 获取所有的工作表列表
 func ListSheets(ctx context.Context, userID, classID int64, page, pageSize int) (*DTO.SheetListResponseDTO, *apiError.ApiError) {
+	_, err := dao.GetClassByID(ctx, classID)
+	if err != nil {
+		zap.L().Error("CreateSheet 查询班级失败", zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "创建工作表失败"}
+	}
 	sheets, total, err := dao.ListSheets(ctx, userID, classID, page, pageSize)
 	if err != nil {
 		zap.L().Error("ListSheets 查询失败", zap.Error(err))

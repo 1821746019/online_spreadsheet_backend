@@ -273,7 +273,7 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 
 	// 获取目标单元格
 	targetCell, err := dao.GetCellByPositionTx(ctx, tx, sheetID, dto.TargetRow, dto.TargetCol)
-	if err != nil || targetCell == nil || targetCell.LastModifiedBy != userID {
+	if err != nil || targetCell == nil {
 		tx.Rollback()
 		zap.L().Error("MoveDragItem 获取目标单元格失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "获取目标单元格失败"}
