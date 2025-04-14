@@ -38,6 +38,26 @@ func ClassNameExists(ctx context.Context, name string) (bool, error) {
 	return exist, nil
 }
 
+func GetClassTotalWeeks(ctx context.Context, classID int64) (int, error) {
+	var maxWeek int
+	err := mysql.GetDB().WithContext(ctx).
+		Model(&model.Sheet{}).
+		Where("class_id = ? AND delete_time = 0", classID).
+		Select("COALESCE(MAX(week), 18) as max_week").
+		Scan(&maxWeek).Error
+
+	if err != nil {
+		return 0, err
+	}
+
+	// 确保至少返回1周
+	if maxWeek <= 0 {
+		maxWeek = 18 // 默认值
+	}
+
+	return maxWeek, nil
+}
+
 func ListClasses(ctx context.Context, page, pageSize int) ([]*model.Class, int64, error) {
 	var classes []*model.Class
 	var total int64

@@ -108,11 +108,19 @@ func GetDragItem(ctx context.Context, userID int64, itemID int64) (*DTO.DragItem
 			zap.Error(err))
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取班级信息失败"}
 	}
+	teacher, err := dao.FindUserByID(ctx, item.CreatorID)
+	if err != nil {
+		zap.L().Error("获取用户信息失败",
+			zap.Int64("userID", item.CreatorID),
+			zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取用户信息失败"}
+	}
 	return &DTO.DragItemResponseDTO{
 		ID:         item.ID,
 		Content:    item.Content,
 		WeekType:   item.WeekType,
 		Classroom:  item.Classroom,
+		Teacher:    teacher.Username,
 		ClassNames: classNames,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),
@@ -263,14 +271,6 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		}
 	}()
 
-	// 获取拖拽元素当前所在单元格（可能为 nil，代表该拖拽元素在待拖拽列表中）
-	sourceCell, err := dao.GetCellByDragItemIDTx(ctx, tx, sheetID, dragItemID)
-	if err != nil {
-		tx.Rollback()
-		zap.L().Error("MoveDragItem 获取源单元格失败", zap.Error(err))
-		return &apiError.ApiError{Code: code.ServerError, Msg: "获取源单元格失败"}
-	}
-
 	// 获取目标单元格
 	targetCell, err := dao.GetCellByPositionTx(ctx, tx, sheetID, dto.TargetRow, dto.TargetCol)
 	if err != nil || targetCell == nil {
@@ -284,80 +284,14 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		return &apiError.ApiError{Code: code.ServerError, Msg: "目标单元格已有拖拽元素"}
 	}
 
-	// 如果目标单元格已有拖拽元素（targetCell.ItemID != nil）
-	if targetCell.ItemID != nil {
-		// 若拖拽元素原本在单元格中，则执行交换操作
-		if sourceCell != nil {
-			tmp := targetCell.ItemID
-			targetCell.ItemID = sourceCell.ItemID
-			sourceCell.ItemID = tmp
-
-			// 更新两个单元格
-			if err := dao.UpdateCellTx(ctx, tx, sourceCell); err != nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 更新源单元格失败", zap.Error(err))
-				return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-			}
-			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 更新目标单元格失败", zap.Error(err))
-				return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-			}
-		} else {
-			// 若拖拽元素来自待拖拽列表，但目标单元格已有拖拽元素，则按业务规则不支持交换
-			targetCell.ItemID = &item.ID // 保持目标单元格的拖拽元素不变，或者根据业务逻辑调整
-			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 更新源单元格失败", zap.Error(err))
-				return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-			}
-		}
-	} else {
-		// 目标单元格没有拖拽元素
-		if sourceCell == nil {
-			// 拖拽元素来自待拖拽列表，从待拖拽库中获取该拖拽元素记录
-			dragItem, err := dao.GetDraggableItemByIDTx(ctx, tx, dragItemID)
-			if err != nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 获取待拖拽元素失败", zap.Error(err))
-				return &apiError.ApiError{Code: code.ServerError, Msg: "获取待拖拽元素失败"}
-			}
-			if dragItem == nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 未找到待拖拽元素", zap.Int64("dragItemID", dragItemID))
-				return &apiError.ApiError{Code: code.NotFound, Msg: "拖拽元素不存在"}
-			}
-			// 将目标单元格的内容设为拖拽元素的内容，并关联该拖拽元素
-			targetCell.ItemID = &dragItemID
-			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 更新目标单元格失败", zap.Error(err))
-				return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-			}
-		} else {
-			// 拖拽元素原本在某单元格中，且目标单元格为空：直接移动
-			targetCell.ItemID = &dragItemID
-			if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
-				tx.Rollback()
-				zap.L().Error("MoveDragItem 更新目标单元格失败", zap.Error(err))
-				return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-			}
-			// 清空原单元格（如果与目标单元格不在同一位置）
-			if sourceCell.RowIndex != targetCell.RowIndex || sourceCell.ColIndex != targetCell.ColIndex {
-				sourceCell.ItemID = nil
-				if err := dao.UpdateCellTx(ctx, tx, sourceCell); err != nil {
-					tx.Rollback()
-					zap.L().Error("MoveDragItem 清空源单元格失败", zap.Error(err))
-					return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
-				}
-			}
-		}
-	}
-
 	// 更新单元格更新时间
 	targetCell.UpdateTime = time.Now()
-	if sourceCell != nil {
-		sourceCell.UpdateTime = time.Now()
+	targetCell.ItemID = &item.ID
+	targetCell.LastModifiedBy = userID
+	if err := dao.UpdateCellTx(ctx, tx, targetCell); err != nil {
+		tx.Rollback()
+		zap.L().Error("MoveDragItem 更新源单元格失败", zap.Error(err))
+		return &apiError.ApiError{Code: code.ServerError, Msg: "更新单元格失败"}
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -371,19 +305,28 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		zap.L().Error("获取工作表信息失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "获取工作表失败"}
 	}
+
+	totalWeeks, err := dao.GetClassTotalWeeks(ctx, currentSheet.ClassID)
+	if err != nil {
+		zap.L().Error("获取班级总周数失败",
+			zap.Int64("classID", currentSheet.ClassID),
+			zap.Error(err))
+		return &apiError.ApiError{Code: code.ServerError, Msg: "获取班级周数失败"}
+	}
+
 	// 根据周类型生成目标周列表
 	var targetWeeks []int
 	switch item.WeekType {
 	case "single":
-		for w := 1; w <= 18; w += 2 { // 假设总共有18周
+		for w := 1; w <= totalWeeks; w += 2 { // 假设总共有18周
 			targetWeeks = append(targetWeeks, w)
 		}
 	case "double":
-		for w := 2; w <= 18; w += 2 {
+		for w := 2; w <= totalWeeks; w += 2 {
 			targetWeeks = append(targetWeeks, w)
 		}
 	case "all":
-		for w := 1; w <= 18; w++ {
+		for w := 1; w <= totalWeeks; w++ {
 			targetWeeks = append(targetWeeks, w)
 		}
 	}
@@ -422,5 +365,5 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 		}
 	}
 
-	return nil
+	return &apiError.ApiError{Code: code.Success, Msg: "操作成功"}
 }

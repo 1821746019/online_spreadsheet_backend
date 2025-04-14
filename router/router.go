@@ -84,7 +84,7 @@ func SetupRouter() *gin.Engine {
 
 		// 单元格管理
 		v1.GET("/classes/:class_id/sheet/:sheet_id/cell", controller.GetCellsHandler)
-		// v1.PUT("/sheet/:sheet_id/cell", controller.UpdateCellHandler)
+		v1.PUT("/classes/:class_id/sheet/:sheet_id/cell", controller.DeleteItemInCellHandler)
 
 		// 待拖动单元格管理
 		v1.POST("/drag-item", controller.CreateDragCellHandler)                 // 创建待拖动单元格(课程)

@@ -198,9 +198,10 @@ func MoveDragItemHandler(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	err = service.MoveDragItem(ctx, currentUserID, sheetID, dragItemID, &req)
-	if err != nil {
+	apiErr := service.MoveDragItem(ctx, currentUserID, sheetID, dragItemID, &req)
+	if apiErr.Code != code.Success {
 		ResponseErrorWithMsg(c, code.ServerError, "拖拽失败")
 		return
 	}
+	ResponseSuccess(c, "拖拽成功")
 }
