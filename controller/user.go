@@ -35,7 +35,7 @@ func SignUpHandler(c *gin.Context) {
 		zap.L().Error("AuthServiceInterface.SignupService() 失败", zap.Error(apiError))
 		return
 	}
-	ResponseSuccess(c, nil)
+	ResponseSuccess(c, "注册成功")
 }
 
 // LoginHandler 登录接口

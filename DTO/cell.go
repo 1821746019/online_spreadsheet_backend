@@ -13,15 +13,15 @@ type CellDTO struct {
 }
 
 type DeleteItemInCellRequest struct {
-	Row int `json:"row", binding:"required"`
-	Col int `json:"col", binding:"required"`
+	Row int `json:"row" binding:"required"`
+	Col int `json:"col" binding:"required"`
 }
 
 type CreateDragItemRequestDTO struct {
 	Content          string  `json:"content" binding:"required"`
 	WeekType         string  `json:"week_type" binding:"required"`
 	Classroom        string  `json:"classroom" binding:"required"`
-	SelectedClassIDs []int64 `json:"selected_class_ids,required"` // 使用omitempty实现可选
+	SelectedClassIDs []int64 `json:"selected_class_ids,required"`
 }
 
 type UpdateDragItemRequestDTO struct {

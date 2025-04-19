@@ -90,6 +90,7 @@ CREATE TABLE `draggable_item` (
   INDEX `idx_creator` (`creator_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='可拖放元素库';
 
+
 -- 多班级复用
 DROP TABLE IF EXISTS `draggable_class_sheet`;
 CREATE TABLE `draggable_class_sheet` (

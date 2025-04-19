@@ -1,9 +1,14 @@
 package controller
 
 import (
+	"context"
+	"errors"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
+	"github.com/sztu/mutli-table/DAO/Redis"
+	"github.com/sztu/mutli-table/cache"
 	"github.com/sztu/mutli-table/pkg/jwt"
 	"go.uber.org/zap"
 )
@@ -49,10 +54,31 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		if err := CheckTokenBlacklist(context.Background(), token); err != nil {
+			ResponseUnAuthorized(c, "token 已被拉黑")
+			zap.L().Info("token 已被拉黑")
+			c.Abort()
+			return
+		}
 
 		c.Set(ContextUserIDKey, myClaims.UserID)
 		c.Set(ContextUsernameKey, myClaims.Username)
 		c.Next()
 		return
 	}
+}
+
+func CheckTokenBlacklist(ctx context.Context, token string) error {
+	key := cache.GenerateRedisKey(cache.BlackListTokenKeyTemplate, token)
+	err := Redis.GetRedisClient().Get(ctx, key).Err()
+	if err == redis.Nil {
+		// 没有查到，说明不在黑名单
+		return nil
+	}
+	if err != nil {
+		// 查询出错，返回原始错误
+		return err
+	}
+	// 查到了，说明在黑名单
+	return errors.New("token is blacklisted")
 }

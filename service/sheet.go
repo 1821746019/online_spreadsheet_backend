@@ -161,11 +161,12 @@ func GetSheet(ctx context.Context, userID int64, sheetID int64) (*DTO.SheetDetai
 
 	// 构造返回的 DTO
 	return &DTO.SheetDetailResponseDTO{
-		ID:   sheet.ID,
-		Name: sheet.Name,
-		Week: int(sheet.Week),
-		Row:  int(sheet.Row),
-		Col:  int(sheet.Col),
+		ID:      sheet.ID,
+		Name:    sheet.Name,
+		Week:    int(sheet.Week),
+		Row:     int(sheet.Row),
+		Col:     int(sheet.Col),
+		ClassID: sheet.ClassID,
 	}, nil
 }
 
