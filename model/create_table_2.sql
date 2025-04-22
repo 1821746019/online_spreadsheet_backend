@@ -83,6 +83,7 @@ CREATE TABLE `draggable_item` (
   `week_type` ENUM('single', 'double', 'all') NOT NULL COMMENT '周类型：单周/双周/全上',
   `classroom` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '上课教室',
   `creator_id` bigint(20) NOT NULL COMMENT '创建者ID',
+  `teacher` varchar(255) COLLATE utf8mb4_general_ci NOT NULL COMMENT '任课老师',
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `delete_time` bigint NULL DEFAULT 0,

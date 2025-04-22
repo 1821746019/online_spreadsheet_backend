@@ -24,6 +24,7 @@ func CreateDragItem(ctx context.Context, userID int64, req *DTO.CreateDragItemRe
 		CreatorID:  userID,
 		WeekType:   req.WeekType,
 		Classroom:  req.Classroom,
+		Teacher:    req.Teacher,
 		CreateTime: time.Now(),
 		UpdateTime: time.Now(),
 	}
@@ -86,6 +87,7 @@ func ListDragItems(ctx context.Context, userID int64, classID int64) ([]*DTO.Dra
 			WeekType:   item.WeekType,
 			Classroom:  item.Classroom,
 			CreatorID:  item.CreatorID,
+			Teacher:    item.Teacher,
 			CreateTime: item.CreateTime.Format(time.RFC3339),
 			UpdateTime: item.UpdateTime.Format(time.RFC3339),
 		})
@@ -108,19 +110,12 @@ func GetDragItem(ctx context.Context, userID int64, itemID int64) (*DTO.DragItem
 			zap.Error(err))
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取班级信息失败"}
 	}
-	teacher, err := dao.FindUserByID(ctx, item.CreatorID)
-	if err != nil {
-		zap.L().Error("获取用户信息失败",
-			zap.Int64("userID", item.CreatorID),
-			zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取用户信息失败"}
-	}
 	return &DTO.DragItemResponseDTO{
 		ID:         item.ID,
 		Content:    item.Content,
 		WeekType:   item.WeekType,
 		Classroom:  item.Classroom,
-		Teacher:    teacher.Username,
+		Teacher:    item.Teacher,
 		ClassNames: classNames,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),
@@ -148,6 +143,7 @@ func UpdateDragItem(ctx context.Context, userID int64, itemID int64, req *DTO.Up
 	item.Content = req.Content
 	item.UpdateTime = time.Now()
 	item.WeekType = req.WeekType
+	item.Teacher = req.Teacher
 	item.Classroom = req.Classroom
 	if err := dao.UpdateDraggableItemTx(ctx, tx, item); err != nil {
 		tx.Rollback()
@@ -185,6 +181,7 @@ func UpdateDragItem(ctx context.Context, userID int64, itemID int64, req *DTO.Up
 		Content:    item.Content,
 		WeekType:   item.WeekType,
 		Classroom:  item.Classroom,
+		Teacher:    item.Teacher,
 		ClassNames: classNames,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),

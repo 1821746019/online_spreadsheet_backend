@@ -17,6 +17,7 @@ type DraggableItem struct {
 	WeekType   string    `gorm:"column:week_type;not null;comment:周类型：单周/双周/全上" json:"week_type"` // 周类型：单周/双周/全上
 	Classroom  string    `gorm:"column:classroom;not null;comment:上课教室" json:"classroom"`         // 上课教室
 	CreatorID  int64     `gorm:"column:creator_id;not null;comment:创建者ID" json:"creator_id"`      // 创建者ID
+	Teacher    string    `gorm:"column:teacher;not null;comment:任课老师" json:"teacher"`             // 任课老师
 	CreateTime time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP" json:"create_time"`
 	UpdateTime time.Time `gorm:"column:update_time;default:CURRENT_TIMESTAMP" json:"update_time"`
 	DeleteTime int64     `gorm:"column:delete_time" json:"delete_time"`
