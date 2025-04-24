@@ -360,8 +360,9 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			zap.L().Error("更新周单元格失败",
 				zap.Int("week", week),
 				zap.Error(err))
+			return &apiError.ApiError{Code: code.ServerError, Msg: "更新周单元格失败"}
 		}
 	}
 
-	return &apiError.ApiError{Code: code.Success, Msg: "操作成功"}
+	return nil
 }
