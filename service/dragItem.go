@@ -63,6 +63,7 @@ func CreateDragItem(ctx context.Context, userID int64, req *DTO.CreateDragItemRe
 		WeekType:   item.WeekType,
 		Classroom:  item.Classroom,
 		Content:    item.Content,
+		Teacher:    item.Teacher,
 		CreatorID:  item.CreatorID,
 		CreateTime: item.CreateTime.Format(time.RFC3339),
 		UpdateTime: item.UpdateTime.Format(time.RFC3339),

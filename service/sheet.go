@@ -122,8 +122,8 @@ func CreateSheet(ctx context.Context, userID, classID int64, dto *DTO.CreateShee
 func ListSheets(ctx context.Context, userID, classID int64, page, pageSize int) (*DTO.SheetListResponseDTO, *apiError.ApiError) {
 	_, err := dao.GetClassByID(ctx, classID)
 	if err != nil {
-		zap.L().Error("CreateSheet 查询班级失败", zap.Error(err))
-		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "创建工作表失败"}
+		zap.L().Error("GetClassByID 查询班级失败", zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取工作表列表失败"}
 	}
 	sheets, total, err := dao.ListSheets(ctx, userID, classID, page, pageSize)
 	if err != nil {
