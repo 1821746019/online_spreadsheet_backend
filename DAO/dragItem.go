@@ -94,9 +94,9 @@ func GetDraggableItemByID(ctx context.Context, id int64) (*model.DraggableItem, 
 		Where("id = ? AND delete_time = 0", id).
 		First(&item).Error
 	if err == gorm.ErrRecordNotFound {
-		return nil, nil
+		return nil, err
 	}
-	return &item, err
+	return &item, nil
 }
 
 func DeleteDraggableItem(ctx context.Context, itemID, sheetID int64) error {
