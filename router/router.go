@@ -28,16 +28,11 @@ func SetupRouter() *gin.Engine {
 	default:
 		gin.SetMode(gin.DebugMode)
 	}
-
+	r.Use(controller.CorsMiddleware())
 	// 创建 API v1 路由组
 	v1 := r.Group("/api/v1").Use(
 		controller.LimitBodySizeMiddleware(),
 		controller.TimeoutMiddleware(),
-		controller.CorsMiddleware(
-			controller.WithAllowOrigins([]string{"localhost"}),
-			controller.WithAllowMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-			controller.WithAllowHeaders([]string{"Origin", "Content-Type", "Accept", "Authorization"}),
-		),
 	)
 
 	// 设置路由
