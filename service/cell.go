@@ -122,7 +122,7 @@ func DeleteItemInCell(ctx context.Context, userID, classID, sheetID int64, req D
 
 		// 获取目标周的工作表
 		targetSheet, err := dao.GetSheetByClassIDandWeek(ctx, currentSheet.ClassID, week)
-		if err != nil {
+		if err != nil || targetSheet == nil {
 			zap.L().Error("获取周工作表失败",
 				zap.Int("week", week),
 				zap.Error(err))
@@ -141,7 +141,7 @@ func DeleteItemInCell(ctx context.Context, userID, classID, sheetID int64, req D
 		targetCell.UpdateTime = time.Now()
 		targetCell.LastModifiedBy = userID
 		// 更新目标单元格
-		if err := dao.UpdateCell(ctx, sheetID, targetCell); err != nil {
+		if err := dao.UpdateCell(ctx, targetSheet.ID, targetCell); err != nil {
 			zap.L().Error("更新周单元格失败",
 				zap.Int("week", week),
 				zap.Error(err))
