@@ -23,7 +23,7 @@ func CreateDragItem(ctx context.Context, userID int64, req *DTO.CreateDragItemRe
 		Content:    req.Content,
 		CreatorID:  userID,
 		WeekType:   req.WeekType,
-		Classroom:  req.Classroom,
+		Classroom:  req.ClassRoom,
 		Teacher:    req.Teacher,
 		CreateTime: time.Now(),
 		UpdateTime: time.Now(),
@@ -145,7 +145,7 @@ func UpdateDragItem(ctx context.Context, userID int64, itemID int64, req *DTO.Up
 	item.UpdateTime = time.Now()
 	item.WeekType = req.WeekType
 	item.Teacher = req.Teacher
-	item.Classroom = req.Classroom
+	item.Classroom = req.ClassRoom
 	if err := dao.UpdateDraggableItemTx(ctx, tx, item); err != nil {
 		tx.Rollback()
 		return nil, &apiError.ApiError{code.ServerError, "基础信息更新失败"}

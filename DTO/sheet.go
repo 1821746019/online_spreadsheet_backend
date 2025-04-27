@@ -34,9 +34,9 @@ type SheetDTO struct {
 
 // SheetListResponseDTO 工作表列表分页响应 DTO
 type SheetListResponseDTO struct {
-	Total  int64      `json:"total"`  // 数据总数
-	Page   int        `json:"page"`   // 当前页码
-	Sheets []SheetDTO `json:"sheets"` // 工作表数据列表
+	Total  int64                    `json:"total"`  // 数据总数
+	Page   int                      `json:"page"`   // 当前页码
+	Sheets []SheetDetailResponseDTO `json:"sheets"` // 工作表数据列表
 }
 
 // SheetDetailResponseDTO 工作表详情 DTO，包含单元格数据
