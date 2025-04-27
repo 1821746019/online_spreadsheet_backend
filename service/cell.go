@@ -41,6 +41,7 @@ func GetCells(ctx context.Context, userID, sheetID int64) ([]DTO.CellDTO, *apiEr
 				Content:   dragItem.Content,
 				WeekType:  dragItem.WeekType,
 				ClassRoom: dragItem.Classroom,
+				Teacher:   dragItem.Teacher,
 			})
 		}
 	}
