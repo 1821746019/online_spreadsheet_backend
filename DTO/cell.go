@@ -7,9 +7,9 @@ type CellDTO struct {
 	ColIndex  int    `json:"col_index"`
 	ItemID    *int64 `json:"item_id"`
 	Content   string `json:"content"`
-	ClassName string `json:"class_name"`
 	WeekType  string `json:"week_type"`
 	ClassRoom string `json:"class_room"`
+	Teacher   string `json:"teacher"`
 }
 
 type DeleteItemInCellRequest struct {
@@ -20,7 +20,7 @@ type DeleteItemInCellRequest struct {
 type CreateDragItemRequestDTO struct {
 	Content          string  `json:"content" binding:"required"`
 	WeekType         string  `json:"week_type" binding:"required"`
-	Classroom        string  `json:"classroom" binding:"required"`
+	ClassRoom        string  `json:"class_room" binding:"required"`
 	Teacher          string  `json:"teacher" binding:"required"`
 	SelectedClassIDs []int64 `json:"selected_class_ids,required"`
 }
@@ -28,7 +28,7 @@ type CreateDragItemRequestDTO struct {
 type UpdateDragItemRequestDTO struct {
 	Content          string  `json:"content"`
 	WeekType         string  `json:"week_type"`
-	Classroom        string  `json:"classroom"`
+	ClassRoom        string  `json:"class_room"`
 	Teacher          string  `json:"teacher"`
 	SelectedClassIDs []int64 `json:"selected_class_ids"`
 }
