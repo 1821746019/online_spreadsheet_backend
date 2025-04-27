@@ -131,12 +131,15 @@ func ListSheets(ctx context.Context, userID, classID int64, page, pageSize int) 
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取工作表列表失败"}
 	}
 
-	var sheetDTOs []DTO.SheetDTO
+	var sheetDTOs []DTO.SheetDetailResponseDTO
 	for _, s := range sheets {
-		sheetDTOs = append(sheetDTOs, DTO.SheetDTO{
+		sheetDTOs = append(sheetDTOs, DTO.SheetDetailResponseDTO{
 			ID:      s.ID,
 			Name:    s.Name,
 			ClassID: s.ClassID,
+			Week:    int(s.Week),
+			Row:     int(s.Row),
+			Col:     int(s.Col),
 		})
 	}
 
