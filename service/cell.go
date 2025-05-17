@@ -75,9 +75,6 @@ func DeleteItemInCell(ctx context.Context, userID, classID, sheetID int64, req D
 	if targetCell.ItemID == nil {
 		return &apiError.ApiError{Code: code.InvalidParam, Msg: "删除的单元格为空"}
 	}
-	if targetCell.LastModifiedBy != userID {
-		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限修改该单元格"}
-	}
 	needToDelete = int(*targetCell.ItemID)
 	targetCell.ItemID = nil
 	targetCell.UpdateTime = time.Now()
