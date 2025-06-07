@@ -48,21 +48,6 @@ func SetupRouter() *gin.Engine {
 	v1.POST("/logout", controller.LogoutHandler)
 	v1.Use(controller.JWTAuthMiddleware())
 	{
-		// // 文档管理
-		// v1.POST("/document", controller.CreateDocumentHandler)
-		// v1.GET("/documents", controller.ListDocumentsHandler)
-		// v1.GET("/document/:id", controller.GetDocumentHandler)
-		// v1.PUT("/document/:id", controller.UpdateDocumentHandler)
-		// v1.DELETE("/document/:id", controller.DeleteDocumentHandler)
-		// v1.POST("/document/:id/share", controller.ShareDocumentHandler)
-
-		// 工作表管理
-		// v1.POST("/document/:id/sheet", controller.CreateSheetHandler)
-		// v1.GET("/document/:id/sheet", controller.ListSheetsHandler)
-		// v1.GET("/document/:id/sheet/:sheet_id", controller.GetSheetHandler)
-		// v1.PUT("/document/:id/sheet/:sheet_id", controller.UpdateSheetHandler)
-		// v1.DELETE("/document/:id/sheet/:sheet_id", controller.DeleteSheetHandler)
-
 		// 班级管理
 		v1.POST("/classes", controller.CreateClassHandler)
 		v1.GET("/classes", controller.ListClassesHandler)
@@ -87,6 +72,12 @@ func SetupRouter() *gin.Engine {
 		v1.GET("/drag-item/:drag_item_id", controller.GetDragCellHandler)       // 获取单个待拖动单元格
 		v1.PUT("/drag-item/:drag_item_id", controller.UpdateDragCellHandler)    // 更新待拖动单元格
 		v1.DELETE("/drag-item/:drag_item_id", controller.DeleteDragCellHandler) // 删除待拖动单元格
+
+		// 所有用户查询
+		v1.GET("/users", controller.ListUsersHandler)
+
+		// 课程查看
+		v1.POST("/sheet/courses/view", controller.ViewDragItemHandler) // 查看自己当前周的所有课程
 
 		// 拖放操作接口
 		v1.PUT("/classes/:class_id/sheet/:sheet_id/drag-item/:drag_item_id/move", controller.MoveDragItemHandler)

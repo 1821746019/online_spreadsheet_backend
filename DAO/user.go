@@ -34,3 +34,24 @@ func FindUserByID(ctx context.Context, userID int64) (*model.User, error) {
 	}
 	return &user, nil
 }
+
+// 获取所有用户
+func ListUsers(ctx context.Context) ([]*model.User, error) {
+	var users []*model.User
+	sqlStr := `SELECT user_id, username FROM user WHERE delete_time = 0`
+	err := mysql.GetDB().WithContext(ctx).Raw(sqlStr).Scan(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func GetUserNameByID(ctx context.Context, userID int64) (string, error) {
+	var username string
+	sqlStr := `SELECT username FROM user WHERE user_id =? AND delete_time = 0`
+	err := mysql.GetDB().WithContext(ctx).Raw(sqlStr, userID).Scan(&username).Error
+	if err != nil {
+		return "", err
+	}
+	return username, nil
+}

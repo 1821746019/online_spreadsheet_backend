@@ -20,7 +20,7 @@ func DeleteDraggableItemTx(ctx context.Context, tx *gorm.DB, itemID int64) error
 func UpdateDraggableItemTx(ctx context.Context, tx *gorm.DB, item *model.DraggableItem) error {
 	return tx.WithContext(ctx).
 		Model(&model.DraggableItem{}).
-		Select("content", "week_type", "classroom", "update_time").
+		Select("content", "week_type", "classroom", "update_time", "teacher").
 		Where("id = ? AND delete_time = 0", item.ID).
 		Updates(item).
 		Error

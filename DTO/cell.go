@@ -36,7 +36,7 @@ type UpdateDragItemRequestDTO struct {
 type DragItemResponseDTO struct {
 	ID         int64    `json:"id"`
 	WeekType   string   `json:"week_type"`
-	Classroom  string   `json:"classroom"`
+	Classroom  string   `json:"class_room"`
 	ClassNames []string `json:"class_names"`
 	Teacher    string   `json:"teacher"`
 	Content    string   `json:"content"`

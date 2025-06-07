@@ -29,6 +29,10 @@ func CreateSheet(ctx context.Context, userID, classID int64, dto *DTO.CreateShee
 			tx.Rollback()
 		}
 	}()
+	existSheet, _ := dao.GetSheetByClassIDandWeek(ctx, classID, dto.Week)
+	if existSheet != nil {
+		return nil, &apiError.ApiError{Code: code.InvalidParam, Msg: "该班级本周已存在课程表，不能重复创建"}
+	}
 
 	// 构造 Sheet 对象
 	sheet := &model.Sheet{
@@ -75,24 +79,6 @@ func CreateSheet(ctx context.Context, userID, classID int64, dto *DTO.CreateShee
 			Msg:  "初始化单元格失败",
 		}
 	}
-
-	// 构造 Permission 记录
-	// perm := &model.Permission{
-	// 	UserID:     sheet.CreatorID,
-	// 	SheetID:    sheet.ID,
-	// 	CreateTime: time.Now(),
-	// 	UpdateTime: time.Now(),
-	// }
-
-	// // 插入 Permission 记录
-	// if err := dao.CreatePermissionTx(tx, perm); err != nil {
-	// 	tx.Rollback()
-	// 	zap.L().Error("CreateSheet 失败：插入 permission 记录错误", zap.Error(err))
-	// 	return nil, &apiError.ApiError{
-	// 		Code: code.ServerError,
-	// 		Msg:  "创建权限记录失败",
-	// 	}
-	// }
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {

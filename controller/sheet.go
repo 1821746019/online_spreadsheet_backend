@@ -14,7 +14,7 @@ func CreateSheetHandler(c *gin.Context) {
 	classIDStr := c.Param("class_id")
 	classID, err := strconv.ParseInt(classIDStr, 10, 64)
 	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "invalid sheet_id")
+		ResponseErrorWithMsg(c, code.InvalidParam, "invalid class_id")
 		return
 	}
 	var req DTO.CreateSheetRequestDTO
@@ -50,7 +50,7 @@ func ListSheetsHandler(c *gin.Context) {
 	classIDStr := c.Param("class_id")
 	classID, err := strconv.ParseInt(classIDStr, 10, 64)
 	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "invalid sheet_id")
+		ResponseErrorWithMsg(c, code.InvalidParam, "invalid class_id")
 		return
 	}
 	// 默认分页参数：第 1 页，每页 10 条记录
@@ -92,7 +92,7 @@ func GetSheetHandler(c *gin.Context) {
 	sheetIDStr := c.Param("sheet_id")
 	sheetID, err := strconv.ParseInt(sheetIDStr, 10, 64)
 	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "invalid sheet_id")
+		ResponseErrorWithMsg(c, code.InvalidParam, "invalid class_id")
 		return
 	}
 	userIDValue, exists := c.Get("user_id")
@@ -120,7 +120,7 @@ func UpdateSheetHandler(c *gin.Context) {
 	sheetIDStr := c.Param("sheet_id")
 	sheetID, err := strconv.ParseInt(sheetIDStr, 10, 64)
 	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "invalid sheet_id")
+		ResponseErrorWithMsg(c, code.InvalidParam, "invalid class_id")
 		return
 	}
 
@@ -155,7 +155,7 @@ func DeleteSheetHandler(c *gin.Context) {
 	sheetIDStr := c.Param("sheet_id")
 	sheetID, err := strconv.ParseInt(sheetIDStr, 10, 64)
 	if err != nil {
-		ResponseErrorWithMsg(c, code.InvalidParam, "invalid sheet_id")
+		ResponseErrorWithMsg(c, code.InvalidParam, "invalid class_id")
 		return
 	}
 	ctx := c.Request.Context()

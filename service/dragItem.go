@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	dao "github.com/sztu/mutli-table/DAO"
@@ -255,9 +256,18 @@ func DeleteDragItem(ctx context.Context, userID int64, itemID int64) *apiError.A
 func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *DTO.MoveDragItemRequest) *apiError.ApiError {
 	item, err := dao.GetDraggableItemByID(ctx, dragItemID)
 	if err != nil || item == nil {
+		zap.L().Error("MoveDragItem 获取元素失败", zap.Error(err))
 		return &apiError.ApiError{code.NotFound, "元素不存在"}
 	}
-	if item.CreatorID != userID {
+	userName, err := dao.GetUserNameByID(ctx, userID)
+	if err != nil {
+		zap.L().Error("MoveDragItem 获取用户名失败", zap.Error(err))
+		return &apiError.ApiError{code.ServerError, "系统繁忙，请稍后再试"}
+	}
+	if item.CreatorID != userID && item.Teacher != userName {
+		zap.L().Error("MoveDragItem 没有权限读取该元素",
+			zap.Int64("userID", userID),
+			zap.Int64("dragItemID", dragItemID))
 		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该元素"}
 	}
 	db := mysql.GetDB().WithContext(ctx)
@@ -268,6 +278,34 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			tx.Rollback()
 		}
 	}()
+	sheet, err := dao.GetSheetByID(ctx, sheetID)
+	if err != nil {
+		zap.L().Error("MoveDragItem 获取工作表失败", zap.Error(err))
+		return &apiError.ApiError{code.ServerError, "系统繁忙，请稍后再试"}
+	}
+	if sheet == nil {
+		zap.L().Error("MoveDragItem 获取工作表失败", zap.Error(err))
+		return &apiError.ApiError{code.NotFound, "工作表不存在"}
+	}
+	week := sheet.Week
+	var sheets []*model.Sheet
+	err = mysql.GetDB().WithContext(ctx).Where("week = ? AND delete_time = 0", week).Find(&sheets).Error
+	if err == nil {
+		for _, sheet := range sheets {
+			cells, err := dao.GetCellsBySheetID(ctx, sheet.ID)
+			if err != nil {
+				continue
+			}
+			for _, cell := range cells {
+				if int(cell.RowIndex) == dto.TargetRow && int(cell.ColIndex) == dto.TargetCol && cell.ItemID != nil {
+					dragItem, _ := dao.GetDraggableItemByID(ctx, *cell.ItemID)
+					if dragItem != nil && dragItem.Teacher == item.Teacher {
+						return &apiError.ApiError{Code: code.ServerError, Msg: "同一教师在该周该位置已存在拖拽元素"}
+					}
+				}
+			}
+		}
+	}
 
 	// 获取目标单元格
 	targetCell, err := dao.GetCellByPositionTx(ctx, tx, sheetID, dto.TargetRow, dto.TargetCol)
@@ -311,7 +349,6 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "获取班级周数失败"}
 	}
-
 	// 根据周类型生成目标周列表
 	var targetWeeks []int
 	switch item.WeekType {
@@ -343,6 +380,27 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 				zap.Error(err))
 			continue
 		}
+		var sheets []*model.Sheet
+		err = mysql.GetDB().WithContext(ctx).Where("week = ? AND delete_time = 0", week).Find(&sheets).Error
+		if err == nil {
+			for _, sheet := range sheets {
+				cells, err := dao.GetCellsBySheetID(ctx, sheet.ID)
+				if err != nil {
+					continue
+				}
+				for _, cell := range cells {
+					if int(cell.RowIndex) == dto.TargetRow && int(cell.ColIndex) == dto.TargetCol && cell.ItemID != nil {
+						dragItem, _ := dao.GetDraggableItemByID(ctx, *cell.ItemID)
+						if dragItem != nil && dragItem.Teacher == item.Teacher {
+							if dragItem != nil && dragItem.Teacher == item.Teacher {
+								return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("第%d周该位置已存在同一教师的拖拽元素", week)}
+							}
+						}
+					}
+				}
+			}
+		}
+
 		// 获取目标单元格
 		targetCell, err := dao.GetCellByPosition(ctx, targetSheet.ID, dto.TargetRow, dto.TargetCol)
 		if err != nil || targetCell == nil {
@@ -365,4 +423,42 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 	}
 
 	return nil
+}
+
+func ViewCoursesByWeek(ctx context.Context, username string, week int) (*DTO.ViewCourseResponse, *apiError.ApiError) {
+	// 查询所有指定 week 的 sheet
+	var sheets []*model.Sheet
+	err := mysql.GetDB().WithContext(ctx).Where("week = ? AND delete_time = 0", week).Find(&sheets).Error
+	if err != nil {
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "查询课程表失败"}
+	}
+	var cells []DTO.CourseCell
+	for _, sheet := range sheets {
+		sheetCells, err := dao.GetCellsBySheetID(ctx, sheet.ID)
+		if err != nil {
+			continue
+		}
+		for _, cell := range sheetCells {
+			if cell.ItemID == nil {
+				continue
+			}
+			item, err := dao.GetDraggableItemByID(ctx, *cell.ItemID)
+			if err != nil || item == nil {
+				continue
+			}
+			if item.Teacher != username {
+				continue
+			}
+			cells = append(cells, DTO.CourseCell{
+				Row:       int(cell.RowIndex),
+				Col:       int(cell.ColIndex),
+				Content:   item.Content,
+				Classroom: item.Classroom,
+				Teacher:   item.Teacher,
+			})
+		}
+	}
+	return &DTO.ViewCourseResponse{
+		Cells: cells,
+	}, nil
 }

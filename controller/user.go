@@ -89,3 +89,14 @@ func LogoutHandler(c *gin.Context) {
 	ResponseSuccess(c, nil)
 	return
 }
+
+func ListUsersHandler(c *gin.Context) {
+	ctx := c.Request.Context()
+	users, err := service.ListUsersService(ctx)
+	if err != nil {
+		ResponseErrorWithMsg(c, code.InvalidParam, err.Error())
+		zap.L().Error("service.ListUsersService() 失败", zap.Error(err))
+		return
+	}
+	ResponseSuccess(c, users)
+}

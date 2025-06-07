@@ -14,7 +14,7 @@ const TableNameSheet = "sheet"
 type Sheet struct {
 	ID         int64     `gorm:"column:id;primaryKey;autoIncrement:true;comment:自增主键" json:"id"`        // 自增主键
 	Name       string    `gorm:"column:name;not null;comment:工作表名称" json:"name"`                        // 工作表名称
-	Week       int32     `gorm:"column:week;not null;comment:周数" json:"week"`                           // 周数
+	Week       int32     `gorm:"column:week;not null;comment:这个表是第几周" json:"week"`                           // 这个表是第几周
 	Row       int32     `gorm:"column:row;not null;comment:行数" json:"row"`                             // 行数
 	Col        int32     `gorm:"column:col;not null;comment:列数" json:"col"`                             // 列数
 	CreatorID  int64     `gorm:"column:creator_id;not null;comment:创建者ID（关联user.id）" json:"creator_id"` // 创建者ID（关联user.id）

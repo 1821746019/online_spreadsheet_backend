@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	dao "github.com/sztu/mutli-table/DAO"
 	"github.com/sztu/mutli-table/DTO"
 	"github.com/sztu/mutli-table/pkg/code"
 	"github.com/sztu/mutli-table/service"
@@ -200,8 +201,40 @@ func MoveDragItemHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	apiErr := service.MoveDragItem(ctx, currentUserID, sheetID, dragItemID, &req)
 	if apiErr != nil {
-		ResponseErrorWithMsg(c, code.ServerError, "拖拽失败")
+		ResponseErrorWithMsg(c, code.ServerError, apiErr.Msg)
 		return
 	}
 	ResponseSuccess(c, "拖拽成功")
+}
+
+func ViewDragItemHandler(c *gin.Context) {
+	var req DTO.ViewCourseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ResponseErrorWithMsg(c, code.InvalidParam, err.Error())
+		return
+	}
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		ResponseErrorWithMsg(c, code.InvalidAuth, "用户未登录")
+		return
+	}
+	currentUserID, ok := userIDValue.(int64)
+	if !ok {
+		ResponseErrorWithMsg(c, code.ServerError, "用户ID解析错误")
+		return
+	}
+	// 根据userID获取用户名
+	ctx := c.Request.Context()
+	user, err := dao.FindUserByID(ctx, currentUserID)
+	if err != nil {
+		ResponseErrorWithMsg(c, code.ServerError, "获取用户信息失败")
+		return
+	}
+	userName := user.Username
+	resp, apiErr := service.ViewCoursesByWeek(ctx, userName, req.Week)
+	if apiErr != nil {
+		ResponseErrorWithApiError(c, apiErr)
+		return
+	}
+	ResponseSuccess(c, resp)
 }
