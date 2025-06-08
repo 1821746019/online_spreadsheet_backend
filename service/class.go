@@ -85,6 +85,11 @@ func DeleteClass(ctx context.Context, userID, classID int64) *apiError.ApiError 
 	if class == nil {
 		return &apiError.ApiError{Code: code.NotFound, Msg: "班级不存在"}
 	}
+	// 新增：先删除该班级下所有 sheet
+	if err := dao.DeleteSheetsByClassID(ctx, classID); err != nil {
+		zap.L().Error("删除班级下sheet失败", zap.Error(err))
+		return &apiError.ApiError{Code: code.ServerError, Msg: "删除班级下sheet失败"}
+	}
 	if err := dao.DeleteClass(ctx, classID); err != nil {
 		zap.L().Error("删除班级失败", zap.Error(err))
 		return &apiError.ApiError{Code: code.ServerError, Msg: "删除班级失败"}

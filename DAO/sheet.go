@@ -57,6 +57,14 @@ func DeleteSheet(ctx context.Context, sheetID int64) error {
 		Update("delete_time", time.Now().Unix()).Error
 }
 
+// DeleteSheetsByClassID 批量逻辑删除指定班级下所有 sheet
+func DeleteSheetsByClassID(ctx context.Context, classID int64) error {
+	return mysql.GetDB().WithContext(ctx).
+		Model(&model.Sheet{}).
+		Where("class_id = ? AND delete_time = 0", classID).
+		Update("delete_time", time.Now().Unix()).Error
+}
+
 func GetSheetByClassIDandWeek(ctx context.Context, classID int64, week int) (*model.Sheet, error) {
 	var sheet model.Sheet
 	err := mysql.GetDB().WithContext(ctx).Where("class_id =? AND week =? AND delete_time =?", classID, week, 0).First(&sheet).Error

@@ -299,7 +299,7 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			for _, cell := range cells {
 				if int(cell.RowIndex) == dto.TargetRow && int(cell.ColIndex) == dto.TargetCol && cell.ItemID != nil {
 					dragItem, _ := dao.GetDraggableItemByID(ctx, *cell.ItemID)
-					if dragItem != nil && dragItem.Teacher == item.Teacher {
+					if dragItem != nil && dragItem.Teacher == item.Teacher && item.ID != dragItemID {
 						return &apiError.ApiError{Code: code.ServerError, Msg: "同一教师在该周该位置已存在拖拽元素"}
 					}
 				}
@@ -391,7 +391,7 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 				for _, cell := range cells {
 					if int(cell.RowIndex) == dto.TargetRow && int(cell.ColIndex) == dto.TargetCol && cell.ItemID != nil {
 						dragItem, _ := dao.GetDraggableItemByID(ctx, *cell.ItemID)
-						if dragItem != nil && dragItem.Teacher == item.Teacher {
+						if dragItem != nil && dragItem.Teacher == item.Teacher && dragItem.ID != item.ID {
 							if dragItem != nil && dragItem.Teacher == item.Teacher {
 								return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("第%d周该位置已存在同一教师的拖拽元素", week)}
 							}
