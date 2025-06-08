@@ -117,9 +117,6 @@ func DeleteItemInCell(ctx context.Context, userID, classID, sheetID int64, req D
 		if targetCell.ItemID == nil {
 			continue
 		}
-		if targetCell.LastModifiedBy != userID {
-			continue
-		}
 		if int(*targetCell.ItemID) != needToDelete {
 			continue
 		}
