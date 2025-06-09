@@ -150,3 +150,13 @@ func GetDraggableItemByIDTx(ctx context.Context, tx *gorm.DB, DraggableItemID in
 	}
 	return &item, nil
 }
+
+func GetDraggableItemClassIDs(ctx context.Context, itemID int64) ([]int64, error) {
+	var classIDs []int64
+	err := mysql.GetDB().WithContext(ctx).
+		Table("draggable_class_sheet").
+		Select("class_id").
+		Where("item_id = ?", itemID).
+		Find(&classIDs).Error
+	return classIDs, err
+}

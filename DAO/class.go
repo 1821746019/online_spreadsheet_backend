@@ -100,3 +100,13 @@ func UpdateClass(ctx context.Context, class *model.Class) error {
 func DeleteClass(ctx context.Context, classID int64) error {
 	return mysql.GetDB().WithContext(ctx).Model(&model.Class{}).Where("id =? AND delete_time = 0", classID).Update("delete_time", time.Now().Unix()).Error
 }
+
+func GetClassNamesByIDs(ctx context.Context, itemIDs []int64) ([]string, error) {
+	var classNames []string
+	err := mysql.GetDB().WithContext(ctx).
+		Model(&model.Class{}).
+		Select("name").
+		Where("id IN ? AND delete_time = 0", itemIDs).
+		Pluck("name", &classNames).Error
+	return classNames, err
+}

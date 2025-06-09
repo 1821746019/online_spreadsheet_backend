@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	dao "github.com/sztu/mutli-table/DAO"
@@ -54,6 +55,13 @@ func CreateDragItem(ctx context.Context, userID int64, req *DTO.CreateDragItemRe
 		}
 	}
 
+	// 批量获取班级名称
+	classNames, err := dao.GetClassNamesByIDs(ctx, req.SelectedClassIDs)
+	if err != nil {
+		zap.L().Error("获取班级名称失败", zap.Error(err))
+		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取班级信息失败"}
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
 		return nil, &apiError.ApiError{Code: code.ServerError, Msg: "事务提交失败"}
@@ -63,6 +71,7 @@ func CreateDragItem(ctx context.Context, userID int64, req *DTO.CreateDragItemRe
 		ID:         item.ID,
 		WeekType:   item.WeekType,
 		Classroom:  item.Classroom,
+		ClassNames: classNames,
 		Content:    item.Content,
 		Teacher:    item.Teacher,
 		CreatorID:  item.CreatorID,
@@ -83,10 +92,18 @@ func ListDragItems(ctx context.Context, userID int64, classID int64) ([]*DTO.Dra
 	}
 	res := make([]*DTO.DragItemResponseDTO, 0, len(items))
 	for _, item := range items {
+		classNames, err := dao.GetClassNamesByItemID(ctx, item.ID)
+		if err != nil {
+			zap.L().Error("获取班级名称失败",
+				zap.Int64("itemID", item.ID),
+				zap.Error(err))
+			return nil, &apiError.ApiError{Code: code.ServerError, Msg: "获取班级信息失败"}
+		}
 		res = append(res, &DTO.DragItemResponseDTO{
 			ID:         item.ID,
 			Content:    item.Content,
 			WeekType:   item.WeekType,
+			ClassNames: classNames,
 			Classroom:  item.Classroom,
 			CreatorID:  item.CreatorID,
 			Teacher:    item.Teacher,
@@ -253,12 +270,21 @@ func DeleteDragItem(ctx context.Context, userID int64, itemID int64) *apiError.A
 // 2. 如果拖拽元素原本不在任何单元格中（sourceCell 为 nil，即在待拖拽列表中）
 //   - 当目标单元格已有拖拽元素时，返回错误
 //   - 当目标单元格为空时，从待拖拽列表中获取该拖拽元素，并关联该拖拽元素
-func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *DTO.MoveDragItemRequest) *apiError.ApiError {
+func MoveDragItem(ctx context.Context, classID, userID, sheetID, dragItemID int64, dto *DTO.MoveDragItemRequest) *apiError.ApiError {
 	item, err := dao.GetDraggableItemByID(ctx, dragItemID)
 	if err != nil || item == nil {
 		zap.L().Error("MoveDragItem 获取元素失败", zap.Error(err))
 		return &apiError.ApiError{code.NotFound, "元素不存在"}
 	}
+	itemClassIDs, err := dao.GetDraggableItemClassIDs(ctx, item.ID)
+	if err != nil {
+		zap.L().Error("MoveDragItem 获取元素班级失败", zap.Error(err))
+		return &apiError.ApiError{code.ServerError, "系统繁忙，请稍后再试"}
+	}
+	if !slices.Contains(itemClassIDs, classID) {
+		return &apiError.ApiError{code.NoPermission, "无权限操作该班级的元素"}
+	}
+
 	userName, err := dao.GetUserNameByID(ctx, userID)
 	if err != nil {
 		zap.L().Error("MoveDragItem 获取用户名失败", zap.Error(err))
@@ -270,6 +296,7 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 			zap.Int64("dragItemID", dragItemID))
 		return &apiError.ApiError{Code: code.NoPermission, Msg: "没有权限读取该元素"}
 	}
+
 	db := mysql.GetDB().WithContext(ctx)
 	tx := db.Begin()
 	// 保证事务异常或 panic 时回滚
@@ -304,6 +331,17 @@ func MoveDragItem(ctx context.Context, userID, sheetID, dragItemID int64, dto *D
 					}
 				}
 			}
+		}
+	}
+	if item.WeekType == "single" {
+		if week%2 == 0 {
+			tx.Rollback()
+			return &apiError.ApiError{Code: code.ServerError, Msg: "单周课程不能添加到双周表格"}
+		}
+	} else if item.WeekType == "double" {
+		if week%2 != 0 {
+			tx.Rollback()
+			return &apiError.ApiError{Code: code.ServerError, Msg: "双周课程不能添加到单周表格"}
 		}
 	}
 
@@ -449,12 +487,19 @@ func ViewCoursesByWeek(ctx context.Context, username string, week int) (*DTO.Vie
 			if item.Teacher != username {
 				continue
 			}
+			// 从sheet表获取 class_id
+			class, err := dao.GetClassByID(ctx, sheet.ClassID)
+			if err != nil || class == nil {
+				continue
+			}
+			className := class.Name
 			cells = append(cells, DTO.CourseCell{
 				Row:       int(cell.RowIndex),
 				Col:       int(cell.ColIndex),
 				Content:   item.Content,
 				Classroom: item.Classroom,
 				Teacher:   item.Teacher,
+				ClassName: className,
 			})
 		}
 	}

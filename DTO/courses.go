@@ -10,6 +10,7 @@ type CourseCell struct {
 	Content   string `json:"content"`
 	Classroom string `json:"classroom"`
 	Teacher   string `json:"teacher"`
+	ClassName string `json:"className"`
 }
 
 type ViewCourseResponse struct {
