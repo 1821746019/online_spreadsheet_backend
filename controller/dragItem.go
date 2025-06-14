@@ -170,8 +170,14 @@ func DeleteDragCellHandler(c *gin.Context) {
 }
 
 func MoveDragItemHandler(c *gin.Context) {
+	classIDStr := c.Param("class_id")
 	sheetIDStr := c.Param("sheet_id")
 	dragItemIDStr := c.Param("drag_item_id")
+	classID, err := strconv.ParseInt(classIDStr, 10, 64)
+	if err != nil {
+		ResponseErrorWithMsg(c, code.InvalidParam, "无效的班级ID")
+		return
+	}
 	sheetID, err := strconv.ParseInt(sheetIDStr, 10, 64)
 	if err != nil {
 		ResponseErrorWithMsg(c, code.InvalidParam, "无效的表格ID")
@@ -199,7 +205,7 @@ func MoveDragItemHandler(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	apiErr := service.MoveDragItem(ctx, currentUserID, sheetID, dragItemID, &req)
+	apiErr := service.MoveDragItem(ctx, classID, currentUserID, sheetID, dragItemID, &req)
 	if apiErr != nil {
 		ResponseErrorWithMsg(c, code.ServerError, apiErr.Msg)
 		return
