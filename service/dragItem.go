@@ -429,10 +429,7 @@ func MoveDragItem(ctx context.Context, classID, userID, sheetID, dragItemID int6
 				for _, cell := range cells {
 					if int(cell.RowIndex) == dto.TargetRow && int(cell.ColIndex) == dto.TargetCol && cell.ItemID != nil {
 						dragItem, _ := dao.GetDraggableItemByID(ctx, *cell.ItemID)
-						if dragItem != nil {
-							tx.Rollback() // 回滚事务
-							return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("该班级第%d周该位置有课程", week)}
-						}
+
 						if dragItem != nil && dragItem.Teacher == item.Teacher && dragItem.ID != item.ID {
 							if dragItem.Teacher == item.Teacher {
 								tx.Rollback() // 回滚事务
@@ -452,7 +449,14 @@ func MoveDragItem(ctx context.Context, classID, userID, sheetID, dragItemID int6
 				zap.Error(err))
 			continue
 		}
-
+		if targetCell.ItemID != nil {
+			// 目标单元格已有拖拽元素，不允许移动
+			zap.L().Error("目标单元格已有拖拽元素",
+				zap.Int("week", week),
+				zap.Int64("itemID", *targetCell.ItemID))
+			tx.Rollback() // 回滚事务
+			return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("该班级第%d周该位置有课程", week)}
+		}
 		targetCell.ItemID = &dragItemID
 		targetCell.UpdateTime = time.Now()
 
