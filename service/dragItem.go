@@ -429,11 +429,17 @@ func MoveDragItem(ctx context.Context, classID, userID, sheetID, dragItemID int6
 				for _, cell := range cells {
 					if int(cell.RowIndex) == dto.TargetRow && int(cell.ColIndex) == dto.TargetCol && cell.ItemID != nil {
 						dragItem, _ := dao.GetDraggableItemByID(ctx, *cell.ItemID)
-
+						className, err := dao.GetClassNameBySheetID(ctx, sheet.ID)
+						if err != nil {
+							zap.L().Error("获取班级名称失败",
+								zap.Int64("sheetID", sheet.ID),
+								zap.Error(err))
+							continue
+						}
 						if dragItem != nil && dragItem.Teacher == item.Teacher && dragItem.ID != item.ID {
 							if dragItem.Teacher == item.Teacher {
 								tx.Rollback() // 回滚事务
-								return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("第%d周该位置已存在同一教师的拖拽元素", week)}
+								return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("在%d班级该位置已存在同一教师的不同课程", className)}
 							}
 						}
 					}

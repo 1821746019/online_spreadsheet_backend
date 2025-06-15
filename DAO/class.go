@@ -110,3 +110,23 @@ func GetClassNamesByIDs(ctx context.Context, itemIDs []int64) ([]string, error) 
 		Pluck("name", &classNames).Error
 	return classNames, err
 }
+
+func GetClassNameBySheetID(ctx context.Context, sheetID int64) (string, error) {
+	var sheet model.Sheet
+	err := mysql.GetDB().WithContext(ctx).
+		Where("id = ? AND delete_time = 0", sheetID).
+		First(&sheet).Error
+	if err != nil {
+		return "", err
+	}
+
+	var class model.Class
+	err = mysql.GetDB().WithContext(ctx).
+		Where("id = ? AND delete_time = 0", sheet.ClassID).
+		First(&class).Error
+	if err != nil {
+		return "", err
+	}
+
+	return class.Name, nil
+}
