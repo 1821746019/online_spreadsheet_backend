@@ -439,7 +439,7 @@ func MoveDragItem(ctx context.Context, classID, userID, sheetID, dragItemID int6
 						if dragItem != nil && dragItem.Teacher == item.Teacher && dragItem.ID != item.ID {
 							if dragItem.Teacher == item.Teacher {
 								tx.Rollback() // 回滚事务
-								return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("在%d班级该位置已存在同一教师的不同课程", className)}
+								return &apiError.ApiError{Code: code.ServerError, Msg: fmt.Sprintf("在%s班级该位置已存在同一教师的不同课程", className)}
 							}
 						}
 					}
